@@ -30,7 +30,7 @@ Proyek ini adalah platform berbasis WordPress untuk membuat undangan pernikahan 
    - URL: [http://localhost:8084](http://localhost:8084)
    - URL Admin: [http://localhost:8084/wp-admin/](http://localhost:8084/wp-admin/)
      - Username: `admin` atau sesuai user yang telah Anda buat sebelumnya.
-     - Password: `password_anda`
+     - Password: `admin`
 
 ## Konfigurasi Teknis
 
