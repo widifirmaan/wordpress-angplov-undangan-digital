@@ -53,3 +53,10 @@ Database dirancang untuk terkonfigurasi secara otomatis dari file `init.sql`.
   docker compose logs -f db
   ```
 - Jika ada masalah *permission denied* saat mengunduh/mengupload media atau plugin dari wp-admin, kontainer sudah dikonfigurasikan dengan `user: "33:33"` untuk menyamai www-data. Jika masih gagal, ubah *ownership* file lokal dengan perintah `sudo chown -R 33:33 wp-content/`.
+
+## Screenshots
+
+![Screenshot 1](./Screenshot%20(34).png)
+![Screenshot 2](./Screenshot%20(35).png)
+![Screenshot 3](./Screenshot%20(36).png)
+![Screenshot 4](./Screenshot%20(37).png)
