@@ -3,16 +3,27 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Builders;
 
 use YahnisElsts\AdminMenuEditor\Customizable\Controls;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Container;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\InterfaceStructure;
 
 class InterfaceBuilder {
 	protected $children = array();
 
 	/**
-	 * @param \YahnisElsts\AdminMenuEditor\Customizable\Controls\Container|ContainerBuilder $container
+	 * @param Container|ContainerBuilder $container
 	 * @return $this
 	 */
 	public function add($container) {
 		$this->children[] = $container;
+		return $this;
+	}
+
+	/**
+	 * @param Container|ContainerBuilder $container
+	 * @return $this
+	 */
+	public function prepend($container): InterfaceBuilder {
+		array_unshift($this->children, $container);
 		return $this;
 	}
 
@@ -22,7 +33,7 @@ class InterfaceBuilder {
 	 * If there is no child with that ID, the container will be added to the beginning
 	 * of the list.
 	 *
-	 * @param Controls\Container|ContainerBuilder $container
+	 * @param Container|ContainerBuilder $container
 	 * @param string $beforeId
 	 * @return $this
 	 */
@@ -37,7 +48,7 @@ class InterfaceBuilder {
 	}
 
 	/**
-	 * @param Controls\Container|ContainerBuilder $container
+	 * @param Container|ContainerBuilder $container
 	 * @param string $afterId
 	 * @return $this
 	 */
@@ -54,7 +65,7 @@ class InterfaceBuilder {
 	protected function findChildIndex($id) {
 		foreach ($this->children as $index => $child) {
 			if ( $child instanceof Controls\UiElement ) {
-				$childId = $child->getId();
+				$childId = $child->getId(null);
 			} else if ( $child instanceof BaseElementBuilder ) {
 				$childId = $child->getCustomId();
 			} else {
@@ -69,10 +80,10 @@ class InterfaceBuilder {
 	}
 
 	/**
-	 * @return \YahnisElsts\AdminMenuEditor\Customizable\Controls\InterfaceStructure
+	 * @return InterfaceStructure
 	 */
 	public function build() {
-		return new Controls\InterfaceStructure('', $this->buildChildren());
+		return new InterfaceStructure('', [], $this->buildChildren());
 	}
 
 	protected function buildChildren() {

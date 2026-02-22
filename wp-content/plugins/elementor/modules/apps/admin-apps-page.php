@@ -45,7 +45,7 @@ class Admin_Apps_Page {
 		}
 	}
 
-	private static function get_plugins() : array {
+	private static function get_plugins(): array {
 		if ( ! self::$wordpress_adapter ) {
 			self::$wordpress_adapter = new Wordpress_Adapter();
 		}
@@ -114,14 +114,12 @@ class Admin_Apps_Page {
 				$app['action_label'] = esc_html__( 'Cannot Activate', 'elementor' );
 				$app['action_url'] = '#';
 			}
-		} else {
-			if ( current_user_can( 'install_plugins' ) ) {
+		} elseif ( current_user_can( 'install_plugins' ) ) {
 				$app['action_label'] = esc_html__( 'Install', 'elementor' );
 				$app['action_url'] = self::$plugin_status_adapter->get_install_plugin_url( $app['file_path'] );
-			} else {
-				$app['action_label'] = esc_html__( 'Cannot Install', 'elementor' );
-				$app['action_url'] = '#';
-			}
+		} else {
+			$app['action_label'] = esc_html__( 'Cannot Install', 'elementor' );
+			$app['action_url'] = '#';
 		}
 
 		return $app;

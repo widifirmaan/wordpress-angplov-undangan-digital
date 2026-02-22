@@ -2,6 +2,8 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Rendering;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\InterfaceStructure;
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
 use YahnisElsts\AdminMenuEditor\Customizable\Controls\Section;
 
@@ -14,7 +16,9 @@ class TabbedPanelRenderer extends ClassicRenderer {
 		$this->additionalStructureClasses = $additionalStructureClasses;
 	}
 
-	public function renderStructure($structure) {
+	public function renderStructure(InterfaceStructure $structure) {
+		$context = new Context();
+
 		$panelId = 'ame-tabbed-panel-' . (++self::$panelCounter);
 		$structureClasses = array_merge(['ame-tabbed-panel'], $this->additionalStructureClasses);
 		echo HtmlHelper::tag('div', ['class' => $structureClasses, 'id' => $panelId]);
@@ -26,7 +30,7 @@ class TabbedPanelRenderer extends ClassicRenderer {
 			echo HtmlHelper::tag(
 				'a',
 				[
-					'href'  => '#' . $this->getSectionElementId($section),
+					'href'  => '#' . $this->getSectionElementId($section, $context),
 					'class' => 'ame-tp-tab-link',
 				],
 				esc_html($section->getTitle())
@@ -42,11 +46,11 @@ class TabbedPanelRenderer extends ClassicRenderer {
 		echo '</div>';
 	}
 
-	public function renderSection($section) {
+	public function renderSection(Section $section, Context $context) {
 		echo HtmlHelper::tag(
 			'div',
 			[
-				'id'    => $this->getSectionElementId($section),
+				'id'    => $this->getSectionElementId($section, $context),
 				'class' => array_merge(['ame-tp-section'], $section->getClasses()),
 			]
 		);
@@ -57,12 +61,12 @@ class TabbedPanelRenderer extends ClassicRenderer {
 
 
 		echo '<div class="ame-tp-section-children">';
-		$this->renderSectionChildren($section);
+		$this->renderSectionChildren($section, $context);
 		echo '</div>';
 		echo '</div>';
 	}
 
-	protected function renderControlGroup($group) {
+	protected function renderControlGroup(ControlGroup $group, Context $context) {
 		$isFieldset = $group->wantsFieldset();
 		if ( $isFieldset === null ) {
 			$isFieldset = false;
@@ -82,10 +86,10 @@ class TabbedPanelRenderer extends ClassicRenderer {
 
 		echo HtmlHelper::tag('div', ['class' => 'ame-tp-control-group-children']);
 		if ( $isFieldset ) {
-			echo HtmlHelper::tag('fieldset', ['disabled' => !$group->isEnabled()]);
+			echo HtmlHelper::tag('fieldset', ['disabled' => !$group->isEnabled($context)]);
 		}
 
-		$this->renderGroupChildren($group);
+		$this->renderGroupChildren($group, $context);
 
 		if ( $isFieldset ) {
 			echo '</fieldset>';
@@ -95,8 +99,8 @@ class TabbedPanelRenderer extends ClassicRenderer {
 		echo '</div>';
 	}
 
-	protected function getSectionElementId(Section $section) {
-		$suffix = $section->getId();
+	protected function getSectionElementId(Section $section, ?Context $context = null) {
+		$suffix = $section->getHtmlIdBase($context);
 		if ( empty($suffix) ) {
 			$suffix = sanitize_key(
 				$section->getTitle() . '-' . substr(sha1(spl_object_hash($section)), 0, 8)
@@ -105,7 +109,7 @@ class TabbedPanelRenderer extends ClassicRenderer {
 		return 'ame-tp-section-' . $suffix;
 	}
 
-	public function enqueueDependencies($containerSelector = '') {
+	public function enqueueDependencies(string $containerSelector = '') {
 		static $done = false;
 		if ( $done ) {
 			return;

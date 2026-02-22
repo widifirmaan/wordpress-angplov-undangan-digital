@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 class CodeEditor extends ClassicControl {
@@ -16,22 +17,24 @@ class CodeEditor extends ClassicControl {
 
 	const SCRIPT_ACTION = 'admin_print_footer_scripts';
 	protected $editorSettings = [];
-	protected $editorId = null;
+	protected $initializedEditorIds = [];
 
 	protected $triedToEnqueueEditor = false;
 
-	public function __construct($settings = [], $params = []) {
-		parent::__construct($settings, $params);
+	public function __construct($settings = [], $params = [], $children = []) {
+		parent::__construct($settings, $params, $children);
 		if ( isset($params['mimeType']) ) {
 			$this->mimeType = $params['mimeType'];
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
-		$id = '_acm_' . $this->id;
-		$this->editorId = $id;
+	public function renderContent(Renderer $renderer, Context $context) {
+		$id = '_acm_' . $this->getHtmlIdBase($context);
+		if ( !array_key_exists($id, $this->initializedEditorIds) ) {
+			$this->initializedEditorIds[$id] = false;
+		}
 
-		$stringValue = $this->getMainSettingValue('');
+		$stringValue = $this->getMainSettingValue('', $context);
 		if ( $stringValue === null ) {
 			$stringValue = '';
 		}
@@ -39,12 +42,12 @@ class CodeEditor extends ClassicControl {
 		echo '<div class="ame-code-editor-control-wrap">';
 		//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buildInputElement() is safe.
 		echo $this->buildInputElement(
-			[
-				'id'    => $id,
-				'class' => 'large-text',
-				'cols'  => 100,
-				'rows'  => 5,
-			],
+			$context, [
+			'id'    => $id,
+			'class' => 'large-text',
+			'cols'  => 100,
+			'rows'  => 5,
+		],
 			'textarea',
 			esc_textarea($stringValue)
 		);
@@ -73,13 +76,13 @@ class CodeEditor extends ClassicControl {
 		//it is actually supported. Let's enable it explicitly. This needs to be
 		//done *before* calling wp_enqueue_code_editor() because that function
 		//uses the "lint" option to decide whether to enqueue the linter(s).
-		if ($this->mimeType === 'text/css') {
+		if ( $this->mimeType === 'text/css' ) {
 			$additionalCodeMirrorOptions['lint'] = true;
 		}
 
 		//This can return false if, for example, the user has disabled syntax highlighting.
 		$this->editorSettings = wp_enqueue_code_editor([
-			'type' => $this->mimeType,
+			'type'       => $this->mimeType,
 			'codemirror' => $additionalCodeMirrorOptions,
 		]);
 		if ( empty($this->editorSettings) ) {
@@ -118,18 +121,34 @@ class CodeEditor extends ClassicControl {
 	}
 
 	public function outputInitScript() {
-		if ( !$this->editorId || empty($this->editorSettings) ) {
+		if ( empty($this->initializedEditorIds) || empty($this->editorSettings) ) {
 			//Code editor was not enqueued for some reason.
+			return;
+		}
+
+		$pendingEditorIds = [];
+		foreach ($this->initializedEditorIds as $editorId => $isInitialized) {
+			if ( !$isInitialized ) {
+				$pendingEditorIds[] = $editorId;
+			}
+		}
+		if ( empty($pendingEditorIds) ) {
 			return;
 		}
 		?>
 		<script type="text/javascript">
 			jQuery(function () {
 				if (typeof wp['codeEditor'] !== 'undefined') {
-					wp.codeEditor.initialize(
-						<?php echo wp_json_encode($this->editorId); ?>,
-						<?php echo wp_json_encode($this->editorSettings); ?>
-					);
+					<?php
+					foreach ($pendingEditorIds as $editorId) {
+						printf(
+							'wp.codeEditor.initialize(%s, %s);',
+							wp_json_encode($editorId),
+							wp_json_encode($this->editorSettings)
+						);
+						$this->initializedEditorIds[$editorId] = true;
+					}
+					?>
 				}
 			});
 		</script>
@@ -142,7 +161,7 @@ class CodeEditor extends ClassicControl {
 		$this->enqueueCodeEditor();
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		if ( !$this->triedToEnqueueEditor ) {
 			$this->enqueueCodeEditor();
 		}

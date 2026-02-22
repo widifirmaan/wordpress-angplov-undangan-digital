@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\SettingCondition;
 
 trait Toggleable {
@@ -21,16 +22,19 @@ trait Toggleable {
 			} else {
 				$this->enabled = $params['enabled'];
 			}
-		} else if ( isset($this->mainSetting) && !empty($this->mainSetting) ) {
-			$this->enabled = $this->mainSetting->isEditableByUser() ? '__return_true' : '__return_false';
+		} else if ( !empty($this->mainBinding) ) {
+			$this->enabled = function (?Context $context = null) {
+				return $this->mainBinding->isEditableByUser($context);
+			};
 		}
 	}
 
 	/**
+	 * @param Context|null $context
 	 * @return bool
 	 */
-	public function isEnabled() {
-		return call_user_func($this->enabled);
+	public function isEnabled(?Context $context = null) {
+		return call_user_func($this->enabled, $context);
 	}
 
 	protected function getKoEnableBinding() {

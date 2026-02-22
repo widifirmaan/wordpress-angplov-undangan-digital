@@ -1,14 +1,13 @@
 <?php
-
 namespace Elementor\Core\Settings\EditorPreferences;
 
 use Elementor\Controls_Manager;
-use Elementor\Core\Editor\Editor;
 use Elementor\Core\Settings\Base\Model as BaseModel;
+use Elementor\Modules\Checklist\Module as ChecklistModule;
 use Elementor\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Model extends BaseModel {
@@ -21,7 +20,6 @@ class Model extends BaseModel {
 	 * @return string The name.
 	 * @since 2.8.0
 	 * @access public
-	 *
 	 */
 	public function get_name() {
 		return 'editor-preferences';
@@ -93,7 +91,7 @@ class Model extends BaseModel {
 				'type' => Controls_Manager::SLIDER,
 				'range' => [
 					'px' => [
-						'min' => 200,
+						'min' => 250,
 						'max' => 680,
 					],
 				],
@@ -111,26 +109,6 @@ class Model extends BaseModel {
 				'separator' => 'before',
 			]
 		);
-
-		if ( ! Plugin::$instance->experiments->is_feature_active( Editor::EDITOR_V2_EXPERIMENT_NAME ) ) {
-
-			$this->add_control(
-				'default_device_view',
-				[
-					'label' => esc_html__( 'Default device view', 'elementor' ),
-					'type' => Controls_Manager::SELECT,
-					'default' => 'default',
-					'options' => [
-						'default' => esc_html__( 'Default', 'elementor' ),
-						'mobile' => esc_html__( 'Mobile', 'elementor' ),
-						'tablet' => esc_html__( 'Tablet', 'elementor' ),
-						'desktop' => esc_html__( 'Desktop', 'elementor' ),
-					],
-					'description' => esc_html__( 'Choose which device to display when clicking the Responsive Mode icon.', 'elementor' ),
-				]
-			);
-
-		}
 
 		$this->add_control(
 			'edit_buttons',
@@ -166,6 +144,29 @@ class Model extends BaseModel {
 				'description' => esc_html__( 'This refers to elements you’ve hidden in the Responsive Visibility settings.', 'elementor' ),
 			]
 		);
+
+		if ( ChecklistModule::should_display_checklist_toggle_control() ) {
+			$this->add_control(
+				'get_started_heading',
+				[
+					'label' => esc_html__( 'Get Started', 'elementor' ),
+					'type' => Controls_Manager::HEADING,
+					'separator' => 'before',
+				]
+			);
+
+			$this->add_control(
+				ChecklistModule::VISIBILITY_SWITCH_ID,
+				[
+					'label' => esc_html__( 'Show launchpad checklist', 'elementor' ),
+					'type' => Controls_Manager::SWITCHER,
+					'label_on' => esc_html__( 'Yes', 'elementor' ),
+					'label_off' => esc_html__( 'No', 'elementor' ),
+					'default' => Plugin::$instance->modules_manager->get_modules( 'checklist' )->is_preference_switch_on() ? 'yes' : '',
+					'description' => esc_html__( 'These will guide you through the first steps of creating your site.', 'elementor' ),
+				]
+			);
+		}
 
 		$this->add_control(
 			'design_system_heading',

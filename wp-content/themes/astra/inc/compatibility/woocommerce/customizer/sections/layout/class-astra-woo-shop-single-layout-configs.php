@@ -3,8 +3,6 @@
  * WooCommerce Options for Astra Theme.
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       Astra 1.1.0
  */
@@ -15,12 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 
-
 	/**
 	 * Customizer Sanitizes Initial setup
 	 */
 	class Astra_Woo_Shop_Single_Layout_Configs extends Astra_Customizer_Config_Base {
-
 		/**
 		 * Register Astra-WooCommerce Shop Single Layout Customizer Configurations.
 		 *
@@ -33,7 +29,6 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 
 			/** @psalm-suppress UndefinedClass */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
 			$product_divider_title = astra_has_pro_woocommerce_addon() ? __( 'Product Structure Options', 'astra' ) : __( 'Product Options', 'astra' );
-
 
 			$clonning_attr    = array();
 			$add_to_cart_attr = array();
@@ -99,9 +94,8 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'control'  => 'ast-heading',
 					'priority' => 15,
 					'settings' => array(),
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
+					'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
 				),
-
 
 				/**
 				 * Option: Single Post Meta
@@ -128,7 +122,6 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 						),
 						$clonning_attr
 					),
-					'divider'           => array( 'ast_class' => 'ast-section-spacing' ),
 				),
 
 				/**
@@ -142,12 +135,12 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'control'  => 'ast-heading',
 					'priority' => 16,
 					'settings' => array(),
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
+					'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
 				),
 
 				/**
-				* Option: Disable Breadcrumb
-				*/
+				 * Option: Disable Breadcrumb
+				 */
 				array(
 					'name'     => ASTRA_THEME_SETTINGS . '[single-product-breadcrumb-disable]',
 					'section'  => 'section-woo-shop-single',
@@ -156,7 +149,6 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'default'  => astra_get_option( 'single-product-breadcrumb-disable' ),
 					'title'    => __( 'Enable Breadcrumb', 'astra' ),
 					'priority' => 16,
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
 				),
 
 				/**
@@ -174,8 +166,8 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 				),
 
 				/**
-				* Option: Single page variation tab layout.
-				*/
+				 * Option: Single page variation tab layout.
+				 */
 				array(
 					'name'        => ASTRA_THEME_SETTINGS . '[single-product-variation-tabs-layout]',
 					'default'     => astra_get_option( 'single-product-variation-tabs-layout' ),
@@ -196,24 +188,16 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'responsive'  => false,
 				),
 
-
 				/**
 				 * Option: Disable Transparent Header on WooCommerce Product pages
 				 */
 				array(
-					'name'     => ASTRA_THEME_SETTINGS . '[transparent-header-disable-woo-products]',
+					'name'     => 'transparent-header-disable-woo-products',
+					'parent'   => ASTRA_THEME_SETTINGS . '[transparent-header-disable-on]',
 					'default'  => astra_get_option( 'transparent-header-disable-woo-products' ),
-					'type'     => 'control',
+					'type'     => 'sub-control',
 					'section'  => 'section-transparent-header',
-					'title'    => __( 'Disable on WooCommerce Product Pages?', 'astra' ),
-					'context'  => array(
-						Astra_Builder_Helper::$general_tab_config,
-						array(
-							'setting'  => ASTRA_THEME_SETTINGS . '[transparent-header-enable]',
-							'operator' => '==',
-							'value'    => '1',
-						),
-					),
+					'title'    => __( 'WooCommerce Product Pages', 'astra' ),
 					'priority' => 26,
 					'control'  => 'ast-toggle-control',
 				),
@@ -251,12 +235,12 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'control'  => 'ast-heading',
 					'priority' => 76,
 					'settings' => array(),
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
+					'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
 				),
 
 				/**
-				* Option: Sticky add to cart.
-				*/
+				 * Option: Sticky add to cart.
+				 */
 				array(
 					'name'     => ASTRA_THEME_SETTINGS . '[single-product-sticky-add-to-cart]',
 					'default'  => astra_get_option( 'single-product-sticky-add-to-cart' ),
@@ -265,7 +249,6 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'title'    => __( 'Enable Sticky Add to Cart', 'astra' ),
 					'control'  => 'ast-toggle-control',
 					'priority' => 76,
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
 				),
 
 				/**
@@ -294,9 +277,8 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 							'value'    => true,
 						),
 					),
-					'divider'    => array( 'ast_class' => 'ast-top-dotted-divider' ),
+					'divider'    => array( 'ast_class' => 'ast-top-divider' ),
 				),
-
 
 				/**
 				 * Option: Divider.
@@ -368,8 +350,8 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 				),
 
 				/**
-				* Option: Sticky add to cart button text color.
-				*/
+				 * Option: Sticky add to cart button text color.
+				 */
 				array(
 					'name'      => ASTRA_THEME_SETTINGS . '[single-product-sticky-add-to-cart-btn-color]',
 					'default'   => astra_get_option( 'single-product-sticky-add-to-cart-btn-color' ),
@@ -514,8 +496,6 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 					'settings'  => array(),
 				),
 
-
-
 			);
 
 			/**
@@ -539,8 +519,8 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 			);
 
 			/**
-			* Option: Button width option
-			*/
+			 * Option: Button width option
+			 */
 			$_configs[] = array(
 				'name'        => 'single-product-cart-button-width',
 				'parent'      => ASTRA_THEME_SETTINGS . '[single-product-structure]',
@@ -627,52 +607,59 @@ if ( ! class_exists( 'Astra_Woo_Shop_Single_Layout_Configs' ) ) {
 				if ( astra_showcase_upgrade_notices() ) {
 					// Learn More link if Astra Pro is not activated.
 					$_configs[] = array(
-						'name'     => ASTRA_THEME_SETTINGS . '[ast-woo-single-product-pro-items]',
-						'type'     => 'control',
-						'control'  => 'ast-upgrade',
-						'renderAs' => 'list',
-						'choices'  => array(
+						'name'      => ASTRA_THEME_SETTINGS . '[ast-woo-single-product-pro-items]',
+						'type'      => 'control',
+						'control'   => 'ast-upgrade',
+						'campaign'  => 'woocommerce',
+						'choices'   => array(
+							// 'two'   => array(
+							// 'title' => __( 'More product galleries', 'astra' ),
+							// ),
+							// 'three' => array(
+							// 'title' => __( 'Sticky product summary', 'astra' ),
+							// ),
+							// 'five'  => array(
+							// 'title' => __( 'Product description layouts', 'astra' ),
+							// ),
+							// 'six'   => array(
+							// 'title' => __( 'Related, Upsell product controls', 'astra' ),
+							// ),
+							// 'seven' => array(
+							// 'title' => __( 'Extras option for product structure', 'astra' ),
+							// ),
+							// 'eight' => array(
+							// 'title' => __( 'More typography options', 'astra' ),
+							// ),
+							// 'nine'  => array(
+							// 'title' => __( 'More color options', 'astra' ),
+							// ),
+							// 'one'   => array(
+							// 'title' => __( 'More design controls', 'astra' ),
+							// ),
+							'one'   => array(
+								'title' => __( ' Advanced Gallery Layouts', 'astra' ),
+							),
 							'two'   => array(
-								'title' => __( 'More product galleries', 'astra' ),
+								'title' => __( ' Smooth Zoom & Sticky Image Effects', 'astra' ),
 							),
 							'three' => array(
-								'title' => __( 'Sticky product summary', 'astra' ),
-							),
-							'five'  => array(
-								'title' => __( 'Product description layouts', 'astra' ),
-							),
-							'six'   => array(
-								'title' => __( 'Related, Upsell product controls', 'astra' ),
-							),
-							'seven' => array(
-								'title' => __( 'Extras option for product structure', 'astra' ),
-							),
-							'eight' => array(
-								'title' => __( 'More typography options', 'astra' ),
-							),
-							'nine'  => array(
-								'title' => __( 'More color options', 'astra' ),
-							),
-							'one'   => array(
-								'title' => __( 'More design controls', 'astra' ),
+								'title' => __( ' Upsells, Related & Recently Viewed Products', 'astra' ),
 							),
 						),
-						'section'  => 'section-woo-shop-single',
-						'default'  => '',
-						'priority' => 999,
-						'title'    => __( 'Extra conversion options for store product pages means extra profit!', 'astra' ),
-						'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
-						'context'  => array(),
+						'section'   => 'section-woo-shop-single',
+						'default'   => '',
+						'priority'  => 999,
+						'title'     => __( 'Get Full Control Over Product Pages', 'astra' ),
+						'divider'   => array( 'ast_class' => 'ast-top-section-divider' ),
+						'context'   => array(),
+						'thumbnail' => ASTRA_THEME_URI . 'inc/assets/images/customizer/woo-single.png',
 					);
 				}
 			}
 
 			return array_merge( $configurations, $_configs );
-
 		}
 	}
 }
 
 new Astra_Woo_Shop_Single_Layout_Configs();
-
-

@@ -30,44 +30,49 @@ function astra_special_archive_dynamic_css( $dynamic_css, $dynamic_css_filtered 
 		return $dynamic_css;
 	}
 
-	foreach ( Astra_Posts_Structure_Loader::get_special_page_types() as $index => $special_type ) {
+	foreach ( Astra_Posts_Structure_Loader::get_special_page_types() as $special_type ) {
 
 		$title_section   = 'section-' . $special_type . '-page-title';
 		$layout_type     = astra_get_option( $title_section . '-layout', 'layout-1' );
-		$layout_2_active = ( 'layout-2' === $layout_type ) ? true : false;
+		$layout_2_active = 'layout-2' === $layout_type ? true : false;
 
 		if ( $layout_2_active ) {
 			$selector = '.search .ast-archive-entry-banner';
 		} else {
-			$selector = '.search .ast-archive-description';
+			$selector = '.search .ast-container section.ast-archive-description';
 		}
 
 		$horizontal_alignment = astra_get_option( $title_section . '-horizontal-alignment' );
-		$desk_h_alignment     = ( isset( $horizontal_alignment['desktop'] ) ) ? $horizontal_alignment['desktop'] : '';
-		$tab_h_alignment      = ( isset( $horizontal_alignment['tablet'] ) ) ? $horizontal_alignment['tablet'] : '';
-		$mob_h_alignment      = ( isset( $horizontal_alignment['mobile'] ) ) ? $horizontal_alignment['mobile'] : '';
+		$desk_h_alignment     = isset( $horizontal_alignment['desktop'] ) ? $horizontal_alignment['desktop'] : '';
+		$tab_h_alignment      = isset( $horizontal_alignment['tablet'] ) ? $horizontal_alignment['tablet'] : '';
+		$mob_h_alignment      = isset( $horizontal_alignment['mobile'] ) ? $horizontal_alignment['mobile'] : '';
 
 		if ( 'layout-1' === $layout_type ) {
-			$desk_h_alignment = ( '' !== $desk_h_alignment ) ? $desk_h_alignment : 'left';
-			$tab_h_alignment  = ( '' !== $tab_h_alignment ) ? $tab_h_alignment : 'left';
-			$mob_h_alignment  = ( '' !== $mob_h_alignment ) ? $mob_h_alignment : 'left';
+			$desk_h_alignment = '' !== $desk_h_alignment ? $desk_h_alignment : 'left';
+			$tab_h_alignment  = '' !== $tab_h_alignment ? $tab_h_alignment : 'left';
+			$mob_h_alignment  = '' !== $mob_h_alignment ? $mob_h_alignment : 'left';
 		}
+
+		// Flip horizontal alignment for RTL so saved left/right mirror automatically.
+		$desk_h_alignment = astra_flip_rtl_alignment( $desk_h_alignment );
+		$tab_h_alignment  = astra_flip_rtl_alignment( $tab_h_alignment );
+		$mob_h_alignment  = astra_flip_rtl_alignment( $mob_h_alignment );
 
 		$elements_gap   = astra_get_option( $title_section . '-elements-gap', 10 );
 		$banner_padding = astra_get_option( $title_section . '-banner-padding', Astra_Posts_Structure_Loader::get_customizer_default( 'responsive-padding' ) );
 		$banner_margin  = astra_get_option( $title_section . '-banner-margin' );
 
 		$banner_height      = astra_get_option( $title_section . '-banner-height' );
-		$desk_banner_height = ( $layout_2_active && isset( $banner_height['desktop'] ) ) ? astra_get_css_value( $banner_height['desktop'], 'px' ) : '';
-		$tab_banner_height  = ( $layout_2_active && isset( $banner_height['tablet'] ) ) ? astra_get_css_value( $banner_height['tablet'], 'px' ) : '';
-		$mob_banner_height  = ( $layout_2_active && isset( $banner_height['mobile'] ) ) ? astra_get_css_value( $banner_height['mobile'], 'px' ) : '';
+		$desk_banner_height = $layout_2_active && isset( $banner_height['desktop'] ) ? astra_get_css_value( $banner_height['desktop'], 'px' ) : '';
+		$tab_banner_height  = $layout_2_active && isset( $banner_height['tablet'] ) ? astra_get_css_value( $banner_height['tablet'], 'px' ) : '';
+		$mob_banner_height  = $layout_2_active && isset( $banner_height['mobile'] ) ? astra_get_css_value( $banner_height['mobile'], 'px' ) : '';
 
 		$text_color       = astra_get_option( $title_section . '-banner-text-color' );
 		$title_color      = astra_get_option( $title_section . '-banner-title-color' );
 		$link_color       = astra_get_option( $title_section . '-banner-link-color' );
 		$link_hover_color = astra_get_option( $title_section . '-banner-link-hover-color' );
 
-		$vert_alignment  = ( $layout_2_active ) ? astra_get_option( $title_section . '-vertical-alignment', 'center' ) : 'center';
+		$vert_alignment  = $layout_2_active ? astra_get_option( $title_section . '-vertical-alignment', 'center' ) : 'center';
 		$width_type      = astra_get_option( $title_section . '-banner-width-type', 'fullwidth' );
 		$custom_width    = astra_get_option( $title_section . '-banner-custom-width', 1200 );
 		$background_type = astra_get_option( $title_section . '-banner-image-type', 'none' );
@@ -300,7 +305,7 @@ function astra_special_archive_dynamic_css( $dynamic_css, $dynamic_css_filtered 
 			justify-content: center;
 			text-align: center;
 			position: relative;
-			background: #eeeeee;
+			background: var(--ast-title-layout-bg);
 		}
 		.ast-archive-entry-banner[data-banner-width-type="custom"] {
 			margin: 0 auto;
@@ -309,7 +314,7 @@ function astra_special_archive_dynamic_css( $dynamic_css, $dynamic_css_filtered 
 		.ast-archive-entry-banner[data-banner-layout="layout-1"] {
 			background: inherit;
 			padding: 20px 0;
-			text-align: left;
+			text-align: ' . astra_flip_rtl_alignment( 'left' ) . ';
 		}
 	';
 

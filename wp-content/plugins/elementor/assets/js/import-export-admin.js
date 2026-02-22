@@ -1,17 +1,5 @@
-/*! elementor - v3.23.0 - 25-07-2024 */
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
-
-/***/ "@wordpress/i18n":
-/*!**************************!*\
-  !*** external "wp.i18n" ***!
-  \**************************/
-/***/ ((module) => {
-
-"use strict";
-module.exports = wp.i18n;
-
-/***/ }),
 
 /***/ "../node_modules/@babel/runtime/helpers/classCallCheck.js":
 /*!****************************************************************!*\
@@ -19,10 +7,8 @@ module.exports = wp.i18n;
   \****************************************************************/
 /***/ ((module) => {
 
-function _classCallCheck(instance, Constructor) {
-  if (!(instance instanceof Constructor)) {
-    throw new TypeError("Cannot call a class as a function");
-  }
+function _classCallCheck(a, n) {
+  if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
 }
 module.exports = _classCallCheck, module.exports.__esModule = true, module.exports["default"] = module.exports;
 
@@ -35,22 +21,16 @@ module.exports = _classCallCheck, module.exports.__esModule = true, module.expor
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var toPropertyKey = __webpack_require__(/*! ./toPropertyKey.js */ "../node_modules/@babel/runtime/helpers/toPropertyKey.js");
-function _defineProperties(target, props) {
-  for (var i = 0; i < props.length; i++) {
-    var descriptor = props[i];
-    descriptor.enumerable = descriptor.enumerable || false;
-    descriptor.configurable = true;
-    if ("value" in descriptor) descriptor.writable = true;
-    Object.defineProperty(target, toPropertyKey(descriptor.key), descriptor);
+function _defineProperties(e, r) {
+  for (var t = 0; t < r.length; t++) {
+    var o = r[t];
+    o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, toPropertyKey(o.key), o);
   }
 }
-function _createClass(Constructor, protoProps, staticProps) {
-  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-  if (staticProps) _defineProperties(Constructor, staticProps);
-  Object.defineProperty(Constructor, "prototype", {
-    writable: false
-  });
-  return Constructor;
+function _createClass(e, r, t) {
+  return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
+    writable: !1
+  }), e;
 }
 module.exports = _createClass, module.exports.__esModule = true, module.exports["default"] = module.exports;
 
@@ -63,19 +43,13 @@ module.exports = _createClass, module.exports.__esModule = true, module.exports[
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 var toPropertyKey = __webpack_require__(/*! ./toPropertyKey.js */ "../node_modules/@babel/runtime/helpers/toPropertyKey.js");
-function _defineProperty(obj, key, value) {
-  key = toPropertyKey(key);
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-  return obj;
+function _defineProperty(e, r, t) {
+  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: !0,
+    configurable: !0,
+    writable: !0
+  }) : e[r] = t, e;
 }
 module.exports = _defineProperty, module.exports.__esModule = true, module.exports["default"] = module.exports;
 
@@ -87,9 +61,9 @@ module.exports = _defineProperty, module.exports.__esModule = true, module.expor
   \***********************************************************************/
 /***/ ((module) => {
 
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : {
-    "default": obj
+function _interopRequireDefault(e) {
+  return e && e.__esModule ? e : {
+    "default": e
   };
 }
 module.exports = _interopRequireDefault, module.exports.__esModule = true, module.exports["default"] = module.exports;
@@ -127,7 +101,7 @@ var _typeof = (__webpack_require__(/*! ./typeof.js */ "../node_modules/@babel/ru
 var toPrimitive = __webpack_require__(/*! ./toPrimitive.js */ "../node_modules/@babel/runtime/helpers/toPrimitive.js");
 function toPropertyKey(t) {
   var i = toPrimitive(t, "string");
-  return "symbol" == _typeof(i) ? i : String(i);
+  return "symbol" == _typeof(i) ? i : i + "";
 }
 module.exports = toPropertyKey, module.exports.__esModule = true, module.exports["default"] = module.exports;
 
@@ -142,13 +116,24 @@ module.exports = toPropertyKey, module.exports.__esModule = true, module.exports
 function _typeof(o) {
   "@babel/helpers - typeof";
 
-  return (module.exports = _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
+  return module.exports = _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
     return typeof o;
   } : function (o) {
     return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-  }, module.exports.__esModule = true, module.exports["default"] = module.exports), _typeof(o);
+  }, module.exports.__esModule = true, module.exports["default"] = module.exports, _typeof(o);
 }
 module.exports = _typeof, module.exports.__esModule = true, module.exports["default"] = module.exports;
+
+/***/ }),
+
+/***/ "@wordpress/i18n":
+/*!**************************!*\
+  !*** external "wp.i18n" ***!
+  \**************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = wp.i18n;
 
 /***/ })
 
@@ -179,8 +164,7 @@ module.exports = _typeof, module.exports.__esModule = true, module.exports["defa
 /******/ 	}
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+// This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
 (() => {
 "use strict";
 /*!*******************************************************!*\
@@ -225,21 +209,30 @@ var Admin = /*#__PURE__*/function () {
     if (this.revertButton) {
       this.revertButton.addEventListener('click', this.onRevertButtonClick.bind(this));
       this.maybeAddRevertBtnMargin();
+      this.maybeScrollToRevertButton();
     }
     this.maybeShowReferrerKitDialog();
   }
-
-  /**
-   * Add bottom margin to revert btn if referred from Kit library
-   */
-  (0, _createClass2.default)(Admin, [{
+  return (0, _createClass2.default)(Admin, [{
+    key: "shouldScrollToRevert",
+    value: function shouldScrollToRevert() {
+      var urlParams = new URLSearchParams(window.location.search);
+      return !!urlParams.get('scroll_to_revert');
+    }
+  }, {
     key: "maybeAddRevertBtnMargin",
     value: function maybeAddRevertBtnMargin() {
-      var referrerKitId = new URLSearchParams(this.revertButton.href).get('referrer_kit');
-      if (!referrerKitId) {
+      if (!this.shouldScrollToRevert()) {
         return;
       }
       this.revertButton.style.marginBottom = this.calculateMargin();
+    }
+  }, {
+    key: "maybeScrollToRevertButton",
+    value: function maybeScrollToRevertButton() {
+      if (!this.shouldScrollToRevert()) {
+        return;
+      }
       this.scrollToBottom();
     }
 
@@ -282,7 +275,7 @@ var Admin = /*#__PURE__*/function () {
       elementorCommon.dialogsManager.createWidget('confirm', {
         headerMessage: __('Are you sure?', 'elementor'),
         // Translators: %s is the name of the active Kit
-        message: __('Removing %s will permanently delete changes made to the Kit\'s content and site settings', 'elementor').replace('%s', this.activeKitName),
+        message: __('Removing %s will permanently delete changes made to the Websites Template\'s content and site settings', 'elementor').replace('%s', this.activeKitName),
         strings: {
           confirm: __('Delete', 'elementor'),
           cancel: __('Cancel', 'elementor')
@@ -309,10 +302,10 @@ var Admin = /*#__PURE__*/function () {
       }
       if (0 === referrerKitId.length) {
         this.createKitDeletedWidget({
-          message: __('Try a different Kit or build your site from scratch.', 'elementor'),
+          message: __('Try a different Website Template or build your site from scratch.', 'elementor'),
           strings: {
             confirm: __('OK', 'elementor'),
-            cancel: __('Kit Library', 'elementor')
+            cancel: __('Library', 'elementor')
           },
           onCancel: function onCancel() {
             location.href = elementorImportExport.appUrl;
@@ -418,7 +411,6 @@ var Admin = /*#__PURE__*/function () {
       sessionStorage.removeItem(this.KIT_DATA_KEY);
     }
   }]);
-  return Admin;
 }();
 window.addEventListener('load', function () {
   new Admin();

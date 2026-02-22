@@ -6,16 +6,23 @@ use Elementor\Element_Base;
 use Elementor\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Assets extends Base {
 	const ASSETS_META_KEY = '_elementor_page_assets';
-
-	// Default value must be empty.
+	/**
+	 * Default value must be empty.
+	 *
+	 * @var array
+	 */
 	private $page_assets;
 
-	// Default value must be empty.
+	/**
+	 * Default value must be empty.
+	 *
+	 * @var array
+	 */
 	private $saved_page_assets;
 
 	public function element_action( Element_Base $element_data ) {
@@ -23,6 +30,29 @@ class Assets extends Base {
 		$controls = $element_data->get_controls();
 
 		$element_assets = $this->get_assets( $settings, $controls );
+
+		$element_assets_depend = [
+			'styles' => $element_data->get_style_depends(),
+			'scripts' => array_merge( $element_data->get_script_depends(), $element_data->get_global_scripts() ),
+		];
+
+		if ( $element_assets_depend ) {
+			foreach ( $element_assets_depend as $assets_type => $assets ) {
+				if ( empty( $assets ) ) {
+					continue;
+				}
+
+				if ( ! isset( $element_assets[ $assets_type ] ) ) {
+					$element_assets[ $assets_type ] = [];
+				}
+
+				foreach ( $assets as $asset_name ) {
+					if ( ! in_array( $asset_name, $element_assets[ $assets_type ], true ) ) {
+						$element_assets[ $assets_type ][] = $asset_name;
+					}
+				}
+			}
+		}
 
 		if ( $element_assets ) {
 			$this->update_page_assets( $element_assets );

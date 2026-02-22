@@ -2,12 +2,18 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Rendering;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Control;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Section;
+
 class FormTableRenderer extends ClassicRenderer {
+	const IS_STACKED_ATRIBUTE = 'controlGroupIsStacked';
+
 	protected $isInsideRow = false;
 
 	protected $sectionNestingLevel = 0;
 
-	public function renderSection($section) {
+	public function renderSection(Section $section, Context $context) {
 		if ( !$section->shouldRender() ) {
 			//Should this even be allowed?
 			echo sprintf(
@@ -28,7 +34,7 @@ class FormTableRenderer extends ClassicRenderer {
 
 		//Render each section as a table.
 		echo '<table class="form-table ame-rendered-form-table">';
-		$this->renderSectionChildren($section);
+		$this->renderSectionChildren($section, $context);
 		echo '</table>';
 		echo '</div>';
 	}
@@ -42,7 +48,7 @@ class FormTableRenderer extends ClassicRenderer {
 		}
 	}
 
-	protected function renderChildSection($section) {
+	protected function renderChildSection(Section $section, Context $context) {
 		$this->sectionNestingLevel++;
 
 		if ( $section->hasTitle() ) {
@@ -52,11 +58,11 @@ class FormTableRenderer extends ClassicRenderer {
 			echo '</td></tr>';
 		}
 
-		$this->renderSectionChildren($section);
+		$this->renderSectionChildren($section, $context);
 		$this->sectionNestingLevel--;
 	}
 
-	protected function renderControlGroup($group) {
+	protected function renderControlGroup(ControlGroup $group, Context $context) {
 		$isStacked = $group->isStacked();
 
 		/*
@@ -75,7 +81,7 @@ class FormTableRenderer extends ClassicRenderer {
 		if ( $renderAsTableRow ) {
 			$this->isInsideRow = true;
 
-			printf('<tr id="%s">', esc_attr($group->getId()));
+			printf('<tr id="%s">', esc_attr($group->getHtmlIdBase($context)));
 			printf(
 				'<th scope="row" class="%s">',
 				esc_attr($group->hasTooltip() ? 'ame-customizable-cg-has-tooltip' : '')
@@ -89,10 +95,13 @@ class FormTableRenderer extends ClassicRenderer {
 
 		if ( $isFieldset ) {
 			/** @noinspection HtmlUnknownAttribute */
-			printf('<fieldset %s>', $group->isEnabled() ? '' : 'disabled');
+			printf('<fieldset %s>', $group->isEnabled($context) ? '' : 'disabled');
 		}
 
-		$this->renderGroupChildren($group, $isStacked);
+		$childContext = $context->withAttributes([
+			self::IS_STACKED_ATRIBUTE => $isStacked,
+		]);
+		$this->renderGroupChildren($group, $childContext);
 
 		if ( $isFieldset ) {
 			echo '</fieldset>';
@@ -104,26 +113,26 @@ class FormTableRenderer extends ClassicRenderer {
 		}
 	}
 
-	public function renderControl($control, $parentContext = null) {
+	public function renderControl(Control $control, Context $context) {
 		if ( !$control->shouldRender() ) {
 			//This should really never happen.
 			echo '<!-- Skipped control: ' . esc_html($control->getId()) . ' -->';
 			return;
 		}
 
-		$addLineBreaks = ($parentContext && !$control->declinesExternalLineBreaks());
+		$addLineBreaks = ($context->getAttribute(self::IS_STACKED_ATRIBUTE) && !$control->declinesExternalLineBreaks());
 		if ( $addLineBreaks ) {
 			echo '<p>';
 		}
 
-		parent::renderControl($control, $parentContext);
+		parent::renderControl($control, $context);
 
 		if ( $addLineBreaks ) {
 			echo '</p>';
 		}
 	}
 
-	public function enqueueDependencies($containerSelector = '') {
+	public function enqueueDependencies(string $containerSelector = '') {
 		static $done = false;
 		if ( $done ) {
 			return;

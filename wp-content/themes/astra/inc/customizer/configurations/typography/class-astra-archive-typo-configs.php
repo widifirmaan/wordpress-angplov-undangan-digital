@@ -3,8 +3,6 @@
  * Styling Options for Astra Theme.
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       Astra 1.0.15
  */
@@ -19,7 +17,6 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 	 * Customizer Sanitizes Initial setup
 	 */
 	class Astra_Archive_Typo_Configs extends Astra_Customizer_Config_Base {
-
 		/**
 		 * Register Archive Typography Customizer Configurations.
 		 *
@@ -44,7 +41,7 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 						'name'     => ASTRA_THEME_SETTINGS . '[ast-blog-pro-items]',
 						'type'     => 'control',
 						'control'  => 'ast-upgrade',
-						'renderAs' => 'list',
+						'campaign' => 'blog-archive',
 						'choices'  => array(
 							'one'    => array(
 								'title' => __( 'Posts Filter', 'astra' ),
@@ -56,28 +53,25 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 								'title' => __( 'Grid, Masonry layout', 'astra' ),
 							),
 							'twelve' => array(
-								'title' => __( 'Extended Meta Style Options', 'astra' ),
+								'title' => __( 'Extended Meta Options', 'astra' ),
 							),
 							'three'  => array(
-								'title' => __( 'Custom featured images size', 'astra' ),
+								'title' => __( 'Custom image size', 'astra' ),
 							),
 							'four'   => array(
-								'title' => __( 'Archive pagination options', 'astra' ),
+								'title' => __( 'Archive pagination', 'astra' ),
 							),
 							'six'    => array(
-								'title' => __( 'Extended typography options', 'astra' ),
+								'title' => __( 'Extended typography', 'astra' ),
 							),
 							'seven'  => array(
-								'title' => __( 'Extended spacing options', 'astra' ),
+								'title' => __( 'Extended spacing', 'astra' ),
 							),
 							'eight'  => array(
 								'title' => __( 'Archive read time', 'astra' ),
 							),
 							'nine'   => array(
-								'title' => __( 'Archive excerpt options', 'astra' ),
-							),
-							'ten'    => array(
-								'title' => __( 'Extended spacing options', 'astra' ),
+								'title' => __( 'Archive excerpt', 'astra' ),
 							),
 						),
 						'section'  => 'section-blog',
@@ -139,6 +133,7 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 						'type'              => 'control',
 						'transport'         => 'postMessage',
 						'title'             => __( 'Meta Font Size', 'astra' ),
+						'is_font'           => true,
 						'priority'          => 140,
 						'default'           => astra_get_option( 'font-size-post-meta' ),
 						'suffix'            => array( 'px', 'em', 'vw', 'rem' ),
@@ -175,6 +170,7 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 						'type'              => 'control',
 						'transport'         => 'postMessage',
 						'title'             => __( 'Taxonomy Font', 'astra' ),
+						'is_font'           => true,
 						'priority'          => 140,
 						'default'           => astra_get_option( 'font-size-post-tax' ),
 						'suffix'            => array( 'px', 'em', 'vw', 'rem' ),
@@ -232,9 +228,7 @@ if ( ! class_exists( 'Astra_Archive_Typo_Configs' ) ) {
 				$_configs    = array_merge( $_configs, $new_configs );
 			}
 
-			$configurations = array_merge( $configurations, $_configs );
-
-			return $configurations;
+			return array_merge( $configurations, $_configs );
 		}
 	}
 }

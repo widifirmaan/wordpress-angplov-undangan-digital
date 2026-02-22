@@ -16,8 +16,6 @@
  * via a child theme.
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       Astra 1.0.0
  */
@@ -37,7 +35,6 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 	 * Astra_After_Setup_Theme initial setup
 	 */
 	class Astra_After_Setup_Theme {
-
 		/**
 		 * Instance
 		 *
@@ -63,6 +60,7 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 		 */
 		public function __construct() {
 			add_action( 'after_setup_theme', array( $this, 'setup_theme' ), 2 );
+			add_action( 'init', array( $this, 'init' ) );
 			add_action( 'wp', array( $this, 'setup_content_width' ) );
 		}
 
@@ -74,14 +72,6 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 		public function setup_theme() {
 
 			do_action( 'astra_class_loaded' );
-
-			/**
-			 * Make theme available for translation.
-			 * Translations can be filed in the /languages/ directory.
-			 * If you're building a theme based on Next, use a find and replace
-			 * to change 'astra' to the name of your theme in all the template files.
-			 */
-			load_theme_textdomain( 'astra', ASTRA_THEME_DIR . '/languages' );
 
 			/**
 			 * Theme Support
@@ -161,9 +151,11 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 			}
 
 			if ( apply_filters( 'astra_fullwidth_oembed', true ) ) {
-				// Filters the oEmbed process to run the responsive_oembed_wrapper() function.
+				// Filters the oEmbed process to run the responsive_oembed_wrapper() function - Fixes the legacy classic editor embeds.
 				add_filter( 'embed_oembed_html', array( $this, 'responsive_oembed_wrapper' ), 10, 3 );
 			}
+			// Enable support for responsive embedded content.
+			add_theme_support( 'responsive-embeds' );
 
 			// WooCommerce.
 			add_theme_support( 'woocommerce' );
@@ -193,6 +185,75 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 			add_filter( 'option_woocommerce_feature_product_block_editor_enabled', '__return_false' );
 
 			add_filter( 'woocommerce_create_pages', array( $this, 'astra_enforce_woo_shortcode_pages' ), 99 );
+
+			if ( function_exists( 'wp_theme_has_theme_json' ) && wp_theme_has_theme_json() ) {
+				add_filter( 'wp_theme_json_data_theme', array( $this, 'modify_theme_palette_names' ) );
+			}
+		}
+
+		/**
+		 * Modify theme palette names.
+		 *
+		 * @param WP_Theme_JSON_Data $theme_json settings.
+		 * @return WP_Theme_JSON_Data
+		 */
+		public function modify_theme_palette_names( $theme_json ) {
+			/** @psalm-suppress UndefinedDocblockClass */
+			$json_data        = $theme_json->get_data();
+			$new_palette_data = array();
+
+			if ( ! empty( $json_data['settings']['color']['palette']['theme'] ) ) {
+				$palette      = $json_data['settings']['color']['palette']['theme'];
+				$color_labels = Astra_Global_Palette::get_palette_labels(); // Use the reusable function for labels.
+				$name_pair    = array();
+				foreach ( $color_labels as $index => $label ) {
+					$name_pair[ 'ast-global-color-' . $index ] = $label;
+				}
+
+				foreach ( $palette as $index => $color_data ) {
+					$slug                       = ! empty( $color_data['slug'] ) ? $color_data['slug'] : '';
+					$new_palette_data[ $index ] = array(
+						'name'  => isset( $name_pair[ $slug ] ) ? $name_pair[ $slug ] : '',
+						'slug'  => $slug,
+						'color' => isset( $color_data['color'] ) ? $color_data['color'] : '',
+					);
+				}
+			}
+
+			if ( ! empty( $new_palette_data ) ) {
+				$new_data = array(
+					'version'  => 1,
+					'settings' => array(
+						'color' => array(
+							'palette' => array(
+								'theme' => $new_palette_data,
+							),
+						),
+					),
+				);
+
+				/** @psalm-suppress UndefinedDocblockClass */
+				$theme_json->update_with( $new_data );
+			}
+
+			return $theme_json;
+		}
+
+		/**
+		 * Initialize theme.
+		 *
+		 * @return void
+		 *
+		 * @since 4.8.8
+		 */
+		public function init() {
+			/**
+			 * Make theme available for translation.
+			 * Translations can be filed in the /languages/ directory.
+			 * If you're building a theme based on Next, use a find and replace
+			 * to change 'astra' to the name of your theme in all the template files.
+			 */
+			load_theme_textdomain( 'astra', ASTRA_THEME_DIR . '/languages' );
 		}
 
 		/**
@@ -235,7 +296,6 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 					$content_width = apply_filters( 'astra_content_width', astra_get_option( 'site-content-width', 1200 ) );
 				}
 			}
-
 		}
 
 		/**
@@ -249,6 +309,11 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 		 * @return string       Updated embed markup.
 		 */
 		public function responsive_oembed_wrapper( $html, $url, $attr, $core_yt_block = false ) {
+			// Only process in the_content filter for classic (non-Gutenberg) content.
+			if ( ! doing_filter( 'the_content' ) || has_blocks() ) {
+				return $html;
+			}
+
 			$add_astra_oembed_wrapper = apply_filters( 'astra_responsive_oembed_wrapper_enable', true );
 			$ast_embed_wrapper_class  = apply_filters( 'astra_embed_wrapper_class', '' );
 
@@ -262,12 +327,10 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 					'wistia.net',
 					'spotify.com',
 					'soundcloud.com',
-					'twitter.com',
 					'animoto.com',
 					'cloudup.com',
 					'poll.fm',
 					'dai.ly',
-					'flickr.com',
 					'mixcloud.com',
 					'pca.st',
 					'reddit.com',
@@ -279,20 +342,21 @@ if ( ! class_exists( 'Astra_After_Setup_Theme' ) ) {
 					'wordpress.org',
 					'wordpress.tv',
 					'imgur.com',
-					'pinterest.com',
 					'ted.com',
 				)
 			);
 
-			if ( $core_yt_block ) {
-				if ( astra_strposa( $url, $allowed_providers ) && $add_astra_oembed_wrapper ) {
+			if ( astra_strposa( $url, $allowed_providers ) && $add_astra_oembed_wrapper ) {
+				if ( $core_yt_block ) {
 					$embed_html = wp_oembed_get( $url );
 					$html       = false !== $embed_html ? '<div class="wp-block-embed__wrapper"> <div class="ast-oembed-container ' . esc_attr( $ast_embed_wrapper_class ) . '" style="height: 100%;">' . $embed_html . '</div> </div>' : '';
+				} else {
+					$html = '' !== $html ? '<div class="ast-oembed-container ' . esc_attr( $ast_embed_wrapper_class ) . '" style="height: 100%;">' . $html . '</div>' : '';
 				}
-			} else {
-				if ( astra_strposa( $url, $allowed_providers ) && $add_astra_oembed_wrapper ) {
-					$html = ( '' !== $html ) ? '<div class="ast-oembed-container ' . esc_attr( $ast_embed_wrapper_class ) . '" style="height: 100%;">' . $html . '</div>' : '';
-				}
+			} elseif ( '' === $html || $url === trim( $html ) ) {
+				$embed_html = wp_oembed_get( $url, array( 'width' => 600 ) );
+				$html       = $embed_html ? $embed_html : $url;
+				wp_maybe_enqueue_oembed_host_js( $html );
 			}
 
 			return $html;

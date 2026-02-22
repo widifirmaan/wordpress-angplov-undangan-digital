@@ -38,7 +38,7 @@ jQuery(function ($) {
                 //run in the context of the "Clear" button, not the input.
                 const $picker = $(this);
                 $picker.wpColorPicker({
-                    change: function (event, ui) {
+                    change: function (_event, ui) {
                         $picker.trigger('adminMenuEditor:colorPickerChange', [ui.color.toString()]);
                         $picker.trigger('adminMenuEditor:controlValueChanged', [ui.color.toString()]);
                     },
@@ -48,7 +48,7 @@ jQuery(function ($) {
                     }
                 });
                 //Update the color picker when the observable changes.
-                $picker.on('adminMenuEditor:observableValueChanged', function (event, newValue) {
+                $picker.on('adminMenuEditor:observableValueChanged', function (_event, newValue) {
                     if (typeof newValue !== 'string') {
                         newValue = '';
                     }

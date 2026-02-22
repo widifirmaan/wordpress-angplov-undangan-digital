@@ -6,7 +6,7 @@ use Elementor\Core\Utils\Promotions\Filtered_Promotions_Manager;
 use Elementor\TemplateLibrary\Source_Local;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Popups_Promotion_Item extends Base_Promotion_Item {
@@ -29,16 +29,15 @@ class Popups_Promotion_Item extends Base_Promotion_Item {
 		$this->promotion_data = Filtered_Promotions_Manager::get_filtered_promotion_data( $this->promotion_data, 'elementor/templates/popup', 'action_button', 'url' );
 	}
 
-	public function get_parent_slug() {
+	public function get_parent_slug(): string {
 		return Source_Local::ADMIN_MENU_SLUG;
 	}
 
-	public function get_name() {
+	public function get_name(): string {
 		return 'popups';
 	}
 
-
-	public function get_label() {
+	public function get_label(): string {
 		return esc_html__( 'Popups', 'elementor' );
 	}
 
@@ -52,14 +51,6 @@ class Popups_Promotion_Item extends Base_Promotion_Item {
 
 	public function get_promotion_description() {
 		return $this->promotion_data['content'];
-	}
-
-	/**
-	 * @deprecated use get_promotion_description instead
-	 * @return void
-	 */
-	public function render_promotion_description() {
-		echo $this->get_promotion_description(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	public function get_cta_url() {

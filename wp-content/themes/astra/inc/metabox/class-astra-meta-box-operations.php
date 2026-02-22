@@ -3,8 +3,6 @@
  * Astra Meta Box Operations
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       Astra 1.0.0
  */
@@ -22,7 +20,6 @@ if ( ! class_exists( 'Astra_Meta_Box_Operations' ) ) {
 	 * Meta Box
 	 */
 	class Astra_Meta_Box_Operations {
-
 		/**
 		 * Instance
 		 *
@@ -68,7 +65,7 @@ if ( ! class_exists( 'Astra_Meta_Box_Operations' ) ) {
 
 			$display_header = apply_filters( 'astra_main_header_display', $display_header );
 
-			if ( 'disabled' == $display_header ) {
+			if ( 'disabled' === $display_header ) {
 
 				remove_action( 'astra_masthead', 'astra_masthead_primary_template' );
 			}
@@ -77,13 +74,13 @@ if ( ! class_exists( 'Astra_Meta_Box_Operations' ) ) {
 		/**
 		 * Disable Post / Page Title
 		 *
-		 * @param  boolean $defaults Show default post title.
-		 * @return boolean           Status of default post title.
+		 * @param  bool $defaults Show default post title.
+		 * @return bool           Status of default post title.
 		 */
 		public function post_title( $defaults ) {
 
 			$title = get_post_meta( get_the_ID(), 'site-post-title', true );
-			if ( 'disabled' == $title ) {
+			if ( 'disabled' === $title ) {
 				$defaults = false;
 			}
 
@@ -100,7 +97,7 @@ if ( ! class_exists( 'Astra_Meta_Box_Operations' ) ) {
 
 			$title = get_post_meta( get_the_ID(), 'site-post-title', true );
 
-			if ( 'disabled' != $title ) {
+			if ( 'disabled' !== $title ) {
 				$classes[] = 'ast-normal-title-enabled';
 			}
 

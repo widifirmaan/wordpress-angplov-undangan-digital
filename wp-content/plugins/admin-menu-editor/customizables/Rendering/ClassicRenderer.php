@@ -34,7 +34,7 @@ abstract class ClassicRenderer extends Renderer {
 		);
 	}
 
-	public function enqueueDependencies($containerSelector = '') {
+	public function enqueueDependencies(string $containerSelector = '') {
 		static $done = false;
 		if ( $done ) {
 			return;

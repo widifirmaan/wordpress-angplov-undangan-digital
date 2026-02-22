@@ -138,7 +138,7 @@ class Stylesheet {
 	 *
 	 * @return Stylesheet The current stylesheet class instance.
 	 */
-	public function add_rules( $selector, $style_rules = null, array $query = null ) {
+	public function add_rules( $selector, $style_rules = null, ?array $query = null ) {
 		$query_hash = 'all';
 
 		if ( $query ) {
@@ -388,10 +388,10 @@ class Stylesheet {
 	/**
 	 * Get query hash style format.
 	 *
-	 * Retrieve formated media query rule with the endpoint width settings.
+	 * Retrieve formatted media query rule with the endpoint width settings.
 	 *
 	 * The method returns the CSS `@media` rule and supported viewport width in
-	 * pixels. It can also handel multiple width endpoints.
+	 * pixels. It can also handle multiple width endpoints.
 	 *
 	 * @since 1.2.0
 	 * @access private

@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 class WpEditor extends ClassicControl {
@@ -11,9 +12,9 @@ class WpEditor extends ClassicControl {
 	protected $rows = 6;
 	protected $teeny = true;
 
-	public function __construct($settings = array(), $params = array()) {
+	public function __construct($settings = array(), $params = array(), $children = []) {
 		$this->hasPrimaryInput = true;
-		parent::__construct($settings, $params);
+		parent::__construct($settings, $params, $children);
 
 		if ( isset($params['rows']) ) {
 			$this->rows = max(intval($params['rows']), 1);
@@ -23,12 +24,12 @@ class WpEditor extends ClassicControl {
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
+	public function renderContent(Renderer $renderer, Context $context) {
 		wp_editor(
-			(string) $this->getMainSettingValue(),
-			$this->getPrimaryInputId(),
+			(string)$this->getMainSettingValue(null, $context),
+			$this->getPrimaryInputId($context),
 			array(
-				'textarea_name' => $this->getFieldName(),
+				'textarea_name' => $this->getFieldName($context),
 				'textarea_rows' => $this->rows,
 				'teeny'         => $this->teeny,
 				'wpautop'       => true,
@@ -40,9 +41,9 @@ class WpEditor extends ClassicControl {
 		static::enqueueDependencies();
 	}
 
-	public function getPrimaryInputId() {
+	public function getPrimaryInputId(?Context $context = null) {
 		//For wp_editor, the ID must only contain lowercase letters and underscores.
-		return preg_replace('/[^a-z_]/', '_', parent::getPrimaryInputId());
+		return preg_replace('/[^a-z_]/', '_', parent::getPrimaryInputId($context));
 	}
 
 	public function supportsLabelAssociation() {
@@ -64,7 +65,7 @@ class WpEditor extends ClassicControl {
 		parent::enqueueKoComponentDependencies();
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
 		$params['rows'] = $this->rows;
 		$params['teeny'] = $this->teeny;

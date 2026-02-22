@@ -2,12 +2,17 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Rendering;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\InterfaceStructure;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Section;
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
 
 class BoxyFormRenderer extends ClassicRenderer {
 	protected $fullWidthGroupsEnabled = false;
 
-	public function renderStructure($structure) {
+	public function renderStructure(InterfaceStructure $structure) {
+		$context = new Context();
+
 		//Separate sections into the main column and sidebar.
 		$main = [];
 		$sidebar = [];
@@ -27,7 +32,7 @@ class BoxyFormRenderer extends ClassicRenderer {
 		//Render the main column.
 		echo '<div class="ame-form-box-main-column">';
 		foreach ($main as $section) {
-			$this->renderSection($section);
+			$this->renderSection($section, $context);
 		}
 		echo '</div>';
 
@@ -35,14 +40,14 @@ class BoxyFormRenderer extends ClassicRenderer {
 		echo '<div class="ame-form-box-sidebar-column">';
 		$this->fullWidthGroupsEnabled = true;
 		foreach ($sidebar as $section) {
-			$this->renderSection($section);
+			$this->renderSection($section, $context);
 		}
 		$this->fullWidthGroupsEnabled = false;
 		echo '</div>';
 		echo '<div class="clear"></div>';
 	}
 
-	public function renderSection($section) {
+	public function renderSection(Section $section, Context $context) {
 		echo HtmlHelper::tag('div', ['class' => 'ame-form-section ame-form-box']);
 
 		$title = $section->getTitle();
@@ -60,18 +65,19 @@ class BoxyFormRenderer extends ClassicRenderer {
 		}
 
 		echo '<div class="ame-form-box-content">';
-		$this->renderSectionChildren($section);
+		$this->renderSectionChildren($section, $context);
 		echo "</div>\n";
 
 		echo '</div>';
 	}
 
 	/**
-	 * @param \YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup $group
+	 * @param ControlGroup $group
+	 * @param Context $context
 	 * @return void
 	 */
-	protected function renderControlGroup($group) {
-		$id = $group->getId();
+	protected function renderControlGroup(ControlGroup $group, Context $context) {
+		$id = $group->getHtmlIdBase($context);
 
 		$groupClasses = array_merge(['ame-form-box-group'], $group->getClasses());
 		echo HtmlHelper::tag(
@@ -94,13 +100,13 @@ class BoxyFormRenderer extends ClassicRenderer {
 		}
 
 		echo HtmlHelper::tag('div', ['class' => $contentClasses]);
-		$this->renderGroupChildren($group);
+		$this->renderGroupChildren($group, $context);
 		echo '</div>';
 
 		echo '</div>';
 	}
 
-	public function enqueueDependencies($containerSelector = '') {
+	public function enqueueDependencies(string $containerSelector = '') {
 		static $done = false;
 		if ( $done ) {
 			return;

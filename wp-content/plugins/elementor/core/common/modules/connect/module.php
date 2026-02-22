@@ -5,13 +5,15 @@ use Elementor\Core\Base\Module as BaseModule;
 use Elementor\Core\Common\Modules\Connect\Apps\Base_App;
 use Elementor\Core\Common\Modules\Connect\Apps\Common_App;
 use Elementor\Core\Common\Modules\Connect\Apps\Connect;
+use Elementor\Core\Common\Modules\Connect\Apps\Feedback;
 use Elementor\Core\Common\Modules\Connect\Apps\Library;
 use Elementor\Plugin;
 use Elementor\Utils;
 use WP_User_Query;
+use Elementor\Core\Common\Modules\Connect\Rest\Rest_Api;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Module extends BaseModule {
@@ -25,6 +27,7 @@ class Module extends BaseModule {
 	const ACCESS_TIER_ADVANCED = 'advanced';
 	const ACCESS_TIER_EXPERT = 'expert';
 	const ACCESS_TIER_AGENCY = 'agency';
+	const ACCESS_TIER_PRO_LEGACY = 'pro';
 
 	/**
 	 * @since 2.3.0
@@ -73,6 +76,7 @@ class Module extends BaseModule {
 		$this->registered_apps = [
 			'connect' => Connect::get_class_name(),
 			'library' => Library::get_class_name(),
+			'feedback' => Feedback::get_class_name(),
 		];
 
 		// When using REST API the parent module is construct after the action 'elementor/init'
@@ -83,6 +87,8 @@ class Module extends BaseModule {
 			// Note: The priority 11 is for allowing plugins to add their register callback on elementor init.
 			add_action( 'elementor/init', [ $this, 'init' ], 11 );
 		}
+
+		add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
 
 		add_filter( 'elementor/tracker/send_tracking_data_params', function ( $params ) {
 			return $this->add_tracking_data( $params );
@@ -119,15 +125,6 @@ class Module extends BaseModule {
 	}
 
 	/**
-	 * @deprecated 3.1.0
-	 */
-	public function localize_settings() {
-		Plugin::$instance->modules_manager->get_modules( 'dev-tools' )->deprecation->deprecated_function( __METHOD__, '3.1.0' );
-
-		return [];
-	}
-
-	/**
 	 * Register app.
 	 *
 	 * Registers an app.
@@ -135,13 +132,13 @@ class Module extends BaseModule {
 	 * @since 2.3.0
 	 * @access public
 	 *
-	 * @param string $slug App slug.
-	 * @param string $class App full class name.
+	 * @param string $slug       App slug.
+	 * @param string $class_name App full class name.
 	 *
 	 * @return self The updated apps manager instance.
 	 */
-	public function register_app( $slug, $class ) {
-		$this->registered_apps[ $slug ] = $class;
+	public function register_app( $slug, $class_name ) {
+		$this->registered_apps[ $slug ] = $class_name;
 
 		return $this;
 	}
@@ -265,5 +262,10 @@ class Module extends BaseModule {
 		];
 
 		return $params;
+	}
+
+	public function register_rest_routes() {
+		$rest_api = new Rest_Api();
+		$rest_api->register_routes();
 	}
 }

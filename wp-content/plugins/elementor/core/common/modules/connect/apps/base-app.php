@@ -11,7 +11,7 @@ use Elementor\Tracker;
 use Elementor\Utils;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 abstract class Base_App {
@@ -88,7 +88,7 @@ abstract class Base_App {
 			$url = $this->get_admin_url( 'disconnect' );
 			$attr = '';
 
-			echo sprintf(
+			printf(
 				'%s <a %s href="%s">%s</a>',
 				// PHPCS - the variable $title is already escaped above.
 				$title, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -170,11 +170,6 @@ abstract class Base_App {
 	}
 
 	public function action_reset() {
-		if ( current_user_can( 'manage_options' ) ) {
-			delete_option( static::OPTION_CONNECT_SITE_KEY );
-			delete_option( 'elementor_remote_info_library' );
-		}
-
 		$this->redirect_to_admin_page();
 	}
 
@@ -293,10 +288,10 @@ abstract class Base_App {
 	 * @since 2.3.0
 	 * @access public
 	 */
-	public function get( $key, $default = null ) {
+	public function get( $key, $default_value = null ) {
 		$this->init_data();
 
-		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $default;
+		return isset( $this->data[ $key ] ) ? $this->data[ $key ] : $default_value;
 	}
 
 	/**
@@ -335,8 +330,8 @@ abstract class Base_App {
 	 * @since 2.3.0
 	 * @access protected
 	 */
-	protected function add( $key, $value, $default = '' ) {
-		$new_value = $this->get( $key, $default );
+	protected function add( $key, $value, $default_value = '' ) {
+		$new_value = $this->get( $key, $default_value );
 
 		if ( is_array( $new_value ) ) {
 			$new_value[] = $value;
@@ -471,7 +466,7 @@ abstract class Base_App {
 			$args
 		);
 
-		if ( is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) && empty( $options['with_error_data'] ) ) {
 			// PHPCS - the variable $response does not contain a user input value.
 			wp_die( $response, [ 'back_link' => true ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
@@ -492,6 +487,10 @@ abstract class Base_App {
 
 		if ( false === $body ) {
 			return new \WP_Error( 422, 'Wrong Server Response' );
+		}
+
+		if ( 201 === $response_code ) {
+			return $body;
 		}
 
 		if ( 200 !== $response_code ) {
@@ -532,7 +531,7 @@ abstract class Base_App {
 	 *
 	 * @return false|string
 	 */
-	private function generate_signature( $payload = [] ) {
+	protected function generate_signature( $payload = [] ) {
 		return hash_hmac(
 			'sha256',
 			wp_json_encode( $payload, JSON_NUMERIC_CHECK ),
@@ -585,6 +584,16 @@ abstract class Base_App {
 				'reconnect_nonce' => wp_create_nonce( $this->get_slug() . 'reconnect' ),
 			] );
 
+		$utm_campaign = get_transient( 'elementor_core_campaign' );
+
+		if ( ! empty( $utm_campaign ) ) {
+			foreach ( [ 'source', 'medium', 'campaign' ] as $key ) {
+				if ( ! empty( $utm_campaign[ $key ] ) ) {
+					$query_params->offsetSet( 'utm_' . $key, $utm_campaign[ $key ] );
+				}
+			}
+		}
+
 		return add_query_arg( $query_params->all(), $this->get_remote_site_url() );
 	}
 
@@ -603,6 +612,7 @@ abstract class Base_App {
 				break;
 
 			case 'cli':
+			case 'rest':
 				$this->admin_notice();
 				die;
 
@@ -661,6 +671,10 @@ abstract class Base_App {
 					<?php echo wp_json_encode( $data ); ?>
 				);
 
+				opener.dispatchEvent( new CustomEvent( 'elementor/connect/success' ),
+					<?php echo wp_json_encode( $data ); ?>
+				);
+
 				window.close();
 				opener.focus();
 			} else {
@@ -702,6 +716,7 @@ abstract class Base_App {
 	protected function redirect_to_remote_authorize_url() {
 		switch ( $this->auth_mode ) {
 			case 'cli':
+			case 'rest':
 				$this->get_app_token_from_cli_token( Utils::get_super_global_value( $_REQUEST, 'token' ) ); //phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verification is not required here.
 				return;
 			default:
@@ -712,6 +727,12 @@ abstract class Base_App {
 
 	protected function get_auth_redirect_uri() {
 		$redirect_uri = $this->get_admin_url( 'get_token' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verification is not required here.
+		$val = Utils::get_super_global_value( $_REQUEST, 'redirect_to' );
+		if ( $val ) {
+			$redirect_uri = add_query_arg( [ 'redirect_to' => $val ], $redirect_uri );
+		}
 
 		switch ( $this->auth_mode ) {
 			case 'popup':
@@ -733,6 +754,13 @@ abstract class Base_App {
 					printf( '[%s] %s', wp_kses_post( $notice['type'] ), wp_kses_post( $notice['content'] ) );
 				}
 				break;
+
+			case 'rest':
+				// After `wp_send_json` the script will die.
+				$this->delete( 'notices' );
+				wp_send_json( $notices );
+				break;
+
 			default:
 				/**
 				 * @var Admin_Notices $admin_notices
@@ -770,10 +798,9 @@ abstract class Base_App {
 			// PHPCS - the values of $item['label'], $color, $status are plain strings.
 			printf( '%s: <strong style="color:%s">%s</strong><br>', $item['label'], $color, $status ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
-
 	}
 
-	private function get_generated_urls( $endpoint ) {
+	protected function get_generated_urls( $endpoint ) {
 		$base_urls = $this->get_api_url();
 
 		if ( ! is_array( $base_urls ) ) {
@@ -794,7 +821,7 @@ abstract class Base_App {
 			$this->set_auth_mode( 'xhr' );
 		}
 
-		$mode = Utils::get_super_global_value( $_REQUEST, 'mode' ); //phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verification is not required here.
+		$mode = Utils::get_super_global_value( $_REQUEST, 'mode' );
 
 		if ( $mode ) {
 			$allowed_auth_modes = [
@@ -803,6 +830,10 @@ abstract class Base_App {
 
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				$allowed_auth_modes[] = 'cli';
+			}
+
+			if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+				$allowed_auth_modes[] = 'rest';
 			}
 
 			if ( in_array( $mode, $allowed_auth_modes, true ) ) {

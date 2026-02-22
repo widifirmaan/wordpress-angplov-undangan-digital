@@ -56,23 +56,28 @@ namespace AmeRedirectorUi {
 		users: MinimalUserProperties[];
 		hasMoreUsers: boolean;
 		selectedTrigger?: RedirectTrigger;
+		saveFormConfig: AmeKoFreeExtensions.SaveFormConfigFromServer;
 	}
 
 	const DefaultActorId = 'special:default';
-	const defaultActor: IAmeActor = {
+	const defaultActor: IAmeActor = new class implements IAmeActor {
 		getDisplayName(): string {
 			return 'Default';
-		},
+		}
 		getId(): string {
 			return DefaultActorId;
-		},
-		isUser(): boolean {
+		}
+		isUser(): this is IAmeUser {
 			return false;
-		},
+		}
 		hasOwnCap(_: string): boolean | null {
 			return null;
 		}
-	}
+
+		getOwnCapabilities(): CapabilityMap | null {
+			return null;
+		}
+	}();
 
 	export class Redirect {
 		protected static inputCounter: number = 0
@@ -140,20 +145,27 @@ namespace AmeRedirectorUi {
 					}
 
 					const missingActorId = this.actorId;
-					this.actor = {
+					this.actor = new class implements IAmeActor {
 						getDisplayName(): string {
 							return 'Missing role or user';
-						},
+						}
+
 						getId(): string {
 							return missingActorId;
-						},
-						isUser(): boolean {
+						}
+
+						isUser(): this is IAmeUser {
 							return false;
-						},
+						}
+
 						hasOwnCap(_: string): boolean | null {
 							return null;
 						}
-					}
+
+						getOwnCapabilities(): CapabilityMap | null {
+							return null;
+						}
+					}();
 				}
 			}
 
@@ -377,7 +389,7 @@ namespace AmeRedirectorUi {
 						return this.redirect.urlTemplate();
 					}
 				},
-				write: (value: string) => {
+				write: (value: string): void => {
 					const menu = this.menuItems.findSelectedMenu(this.redirect);
 					if (menu !== null) {
 						//Can't manually edit the URL because a menu item is selected.
@@ -424,7 +436,7 @@ namespace AmeRedirectorUi {
 				return this.placeholders[actorId];
 			}
 
-			//If the actor hasn't been loaded or created by now, that means it has been deleted
+			//If the actor hasn't been loaded or created by now, that means it has been deleted,
 			//or it was invalid to begin with. Let's use a placeholder object to represent it.
 			let missingActor;
 			if (_.startsWith(actorId, 'user:')) {
@@ -494,6 +506,10 @@ namespace AmeRedirectorUi {
 		hasOwnCap(_: string): boolean | null {
 			return null;
 		}
+
+		getOwnCapabilities(): CapabilityMap | null {
+			return null;
+		}
 	}
 
 	class MissingRolePlaceholder extends MissingActorPlaceholder {
@@ -561,8 +577,7 @@ namespace AmeRedirectorUi {
 
 		actorProvider: ActorProviderProxy;
 
-		isSaving: KnockoutObservable<boolean>;
-		settingsData: KnockoutObservable<string>;
+		readonly saveSettingsForm: AmeKoFreeExtensions.SaveSettingsForm;
 
 		constructor(settings: ScriptData) {
 			const self = this;
@@ -719,8 +734,11 @@ namespace AmeRedirectorUi {
 				this.userSelectionUi = 'search';
 			}
 
-			this.isSaving = ko.observable(false);
-			this.settingsData = ko.observable('');
+			this.saveSettingsForm = new AmeKoFreeExtensions.SaveSettingsForm({
+				...settings.saveFormConfig,
+				settingsGetter: () => this.getSettings(),
+				extraFields: [['selectedTrigger', this.selectedTrigger]]
+			});
 
 			this.isLoaded(true);
 		}
@@ -878,12 +896,6 @@ namespace AmeRedirectorUi {
 			return (actor instanceof MissingActorPlaceholder);
 		}
 
-		saveChanges() {
-			this.isSaving(true);
-			this.settingsData(ko.toJSON(this.getSettings()));
-			return true;
-		}
-
 		private addTestData() {
 			//Add some test data.
 			this.redirects.push(new Redirect({
@@ -969,15 +981,23 @@ jQuery(function ($) {
 			jQuery(element).autocomplete({
 				minLength: 2,
 				source: function (request: any, response:(results: any[]) => void) {
-					const action = AjawV1.getAction('ws-ame-rui-search-users');
+					const action = AjawV2.getAction('ws-ame-rui-search-users');
 					action.get(
 						{term: request.term},
 						function (results) {
-							//Filter received users.
-							if (options.filter) {
-								results = options.filter(results);
+							if (Array.isArray(results)) {
+								let resultsAsArray = results;
+								//Filter received users.
+								if (options.filter) {
+									resultsAsArray = options.filter(resultsAsArray);
+								}
+								response(resultsAsArray)
+							} else {
+								response([]);
+								if (console && console.warn) {
+									console.warn('Invalid response from the server (not an array):', results);
+								}
 							}
-							response(results)
 						},
 						function (error) {
 							response([]);

@@ -39,7 +39,7 @@ class Settings_Sanitizer {
 
 	/**
 	 * @param Elements_Manager $elements_manager
-	 * @param array $widget_types
+	 * @param array            $widget_types
 	 */
 	public function __construct( Elements_Manager $elements_manager, array $widget_types = [] ) {
 		$this->elements_manager = $elements_manager;
@@ -167,7 +167,6 @@ class Settings_Sanitizer {
 
 	/**
 	 * @param string $type
-	 * @param array $settings
 	 *
 	 * @return Element_Base|null
 	 */

@@ -2,6 +2,8 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
+
 class Section extends Container {
 	const NAVIGATION_ROLE = 'navigation';
 	const CONTENT_ROLE = 'content';
@@ -21,8 +23,8 @@ class Section extends Container {
 	 */
 	protected $preferredRole = self::NAVIGATION_ROLE;
 
-	public function __construct($title, $children = [], $params = []) {
-		parent::__construct($title, $children, $params);
+	public function __construct($title, $params = [], $children = []) {
+		parent::__construct($title, $params, $children);
 
 		if ( isset($params['preferredRole']) ) {
 			if ( !array_key_exists($params['preferredRole'], self::VALID_ROLES) ) {
@@ -36,8 +38,8 @@ class Section extends Container {
 		return 'section';
 	}
 
-	public function serializeForJs() {
-		$result = parent::serializeForJs();
+	public function serializeForJs(Context $context): array {
+		$result = parent::serializeForJs($context);
 		if ( $this->preferredRole !== self::NAVIGATION_ROLE ) {
 			$result['preferredRole'] = $this->preferredRole;
 		}

@@ -132,9 +132,9 @@ abstract class ameMenuItem {
 			'page_heading' => '',
 	        'position' => 0,
 	        'parent' => null,
+            'css_class' => '',
 
-	        //Fields that apply only to top level menus.
-	        'css_class' => 'menu-top',
+			//Fields that apply only to top level menus.
 	        'hookname' => '',
 	        'icon_url' => 'dashicons-admin-generic',
 	        'separator' => false,
@@ -193,7 +193,7 @@ abstract class ameMenuItem {
 			'access_level' => 'read',
 			'extra_capability' => '',
 			'page_title' => '',
-			'css_class' => 'menu-top',
+			'css_class' => '',
 			'hookname' => '',
 			'icon_url' => 'dashicons-admin-generic',
 			'open_in' => 'same_window',
@@ -281,7 +281,10 @@ abstract class ameMenuItem {
 		if ( ($inverse_parent_map === null) && !empty($_wp_real_parent_file) && is_array($_wp_real_parent_file) ) {
 			$inverse_parent_map = array_flip($_wp_real_parent_file);
 		}
-		if ( isset($inverse_parent_map[$parent_file]) && (preg_match(self::$mappable_parent_whitelist, $parent_file) === 1) ) {
+		if (
+			isset($parent_file, $inverse_parent_map[$parent_file])
+			&& (preg_match(self::$mappable_parent_whitelist, $parent_file) === 1)
+		) {
 			$parent_file = $inverse_parent_map[$parent_file];
 		}
 
@@ -640,7 +643,7 @@ abstract class ameMenuItem {
 	 * @param string $filename
 	 * @return bool
 	 */
-	private static function is_wp_admin_file($filename) {
+	public static function is_wp_admin_file($filename) {
 		//Check our hard-coded list of admin pages first. It's measurably faster than
 		//hitting the disk with is_file().
 		if ( isset(self::$known_wp_admin_files[$filename]) ) {
@@ -708,7 +711,6 @@ abstract class ameMenuItem {
 		$dom = new DOMDocument();
 		$uniqueId = 'ame-rex-title-wrapper-' . time();
 		if ( @$dom->loadHTML('<div id="' . $uniqueId . '">' . $menuTitle . '</div>') ) {
-			/** @noinspection PhpComposerExtensionStubsInspection */
 			$xpath = new DOMXpath($dom);
 			$result = $xpath->query('//span[contains(@class,"update-plugins") or contains(@class,"awaiting-mod")]');
 			if ( $result->length > 0 ) {

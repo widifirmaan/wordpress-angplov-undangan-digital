@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @deprecated 3.0.0 Use `Plugin::$instance->kits_manager->get_active_kit_for_frontend()` instead.
  */
-
 class Manager extends CSS_Manager {
 
 	/**
@@ -89,7 +88,6 @@ class Manager extends CSS_Manager {
 	 * @since 1.6.0
 	 * @deprecated 3.0.0
 	 * @access protected
-	 * @return string
 	 *
 	 * @return string CSS file name.
 	 */
@@ -99,6 +97,8 @@ class Manager extends CSS_Manager {
 
 	/**
 	 * @deprecated 3.0.0
+	 *
+	 * @throws \Exception If settings validation fails or update operation encounters errors.
 	 */
 	protected function save_settings_to_db( array $settings, $id ) {
 		throw new \Exception( __CLASS__ . ' is deprecated. Use Plugin::$instance->kits_manager->get_active_kit_for_frontend() instead.' );

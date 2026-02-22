@@ -1,6 +1,26 @@
 $smallActorSelectorToUiGap: 2px;
 $largeActorSelectorToUiGap: 8px;
+$tabsToActorSelectorGap: 6px;
+$defaultActorSelectorTopMargin: $tabsToActorSelectorGap;
 
 //Note: At least in WP 6.5, this is the grey that WP uses for .description text,
 //file properties in the media library, etc.
 $ameUiTextMutedColor: #646970;
+
+$codeFontFamily: "Consolas", "Monaco", monospace;
+
+$checkboxListItemLineHeight: 1.64286; //Assuming 14px font size, this gives 23px line height.
+
+//Left margin for children of controls that contain checkboxes or radio buttons.
+//
+//The margin was calculated to align nested checkboxes or radio buttons with the label of the parent control.
+//It may not be pixel-perfect, but it's very close when using the default WP admin styles.
+//
+//Formula breakdown:
+//  1rem = checkbox width (including borders)
+//  0.25rem = right margin of the checkbox
+//  0.29em = approximate gap between the checkbox and label text (varies based on font family and size)
+$controlChildLeftMargin: calc(1rem + 0.25rem + 0.29em);
+
+//Same for small screens (max-width: 782px).
+$smControlChildLeftMargin: calc(1.5625rem + 0.25rem + 0.29em);

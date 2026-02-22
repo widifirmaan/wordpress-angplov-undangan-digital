@@ -1,0 +1,146 @@
+.wp-site-blocks .alignfull, .wp-site-blocks > .wp-block-group.has-background, .wp-site-blocks > .wp-block-cover, .wp-site-blocks > .wp-block-template-part > .wp-block-group.has-background, .wp-site-blocks > .wp-block-template-part > .wp-block-cover, body > .is-root-container > .wp-block-group.has-background, body > .is-root-container > .wp-block-cover, body > .is-root-container > .wp-block-template-part > .wp-block-group.has-background, body > .is-root-container > .wp-block-template-part > .wp-block-cover, .is-root-container .wp-block[data-align="full"]{
+  margin-left: calc(-1* var(--wp--custom--spacing--outer)) !important;
+  margin-right: calc(-1* var(--wp--custom--spacing--outer)) !important;
+  width: unset;
+}
+.wp-site-blocks, .edit-post-visual-editor__post-title-wrapper, .wp-block-group.alignfull, .slider .wp-block-cover, .wp-block-group.has-background, .wp-block-cover.alignfull, .is-root-container .wp-block[data-align="full"] > .wp-block-group, .is-root-container .wp-block[data-align="full"] > .wp-block-cover {
+    padding-left: var(--wp--custom--spacing--outer);
+    padding-right: var(--wp--custom--spacing--outer);
+}
+
+.archieve-post{
+  position: relative !important;
+}
+.blog-date-box{
+  position: absolute !important;
+  left: 15px;
+  top: 13px;
+  z-index: 99;
+}
+.archieve-post .wp-block-post-meta > div:not(:first-child):before{
+  background: transparent;
+}
+.blog-date-mon{
+  border-bottom: 4px solid var(--wp--preset--color--border-color);
+}
+
+/*homepage*/
+
+/*footer-css start*/
+.box-4 .wp-block-gallery img{
+  border-radius: 7px;
+}
+/*testimonial-css start*/
+.testimonial-box{
+  box-shadow: 0px 1px 8px 0px #00000040;
+  position: relative !important;
+}
+.star-img{
+  margin-bottom: 10px !important;
+}
+.testimonial-comas{
+  position: absolute !important;
+  z-index: -1;
+  left: 50%;
+  top: 100px;
+  transform: translateX(-50%);
+}
+.testimonial-img img{
+  height: 50px !important;
+  width: 50px !important;
+}
+/*testimonial-css end*/
+
+/*projects slider start*/
+.projects-slider .swiper-wrapper{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px;
+}
+.projects-slider .swiper-slide{
+  margin-top: 0 !important;
+}
+.project-content-box{
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.projects-slider .swiper-slide .project-content-box-inner{
+  display: inline-block;
+  padding-top: 20px !important;
+  border-top: 1px solid #fff;
+}
+
+.arrow-img-projects{
+  background-color: var(--wp--preset--color--tertiary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  z-index: 99;
+  display: flex;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+/*projects slider end*/
+
+
+/*service slider start*/
+.service-slider .swiper-wrapper{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px;
+}
+.service-slider .swiper-slide{
+  margin-top: 0 !important;
+}
+/*services slider start*/
+.service-slider .swiper-slide figure{
+  margin-bottom: 0 !important;
+}
+.service-slider .swiper-slide img{
+  width: 100% !important;
+  height: 500px !important;
+}
+/*service slider end*/
+
+/*back to top*/
+.wp-block-button.back-to-top .wp-block-button__link.wp-element-button {
+  width: 40px;
+  height: 40px;
+  position: fixed;
+  right: 25px;
+  bottom: 25px;
+  display: inline-block;
+  z-index: 999;
+  text-indent: -5000px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.089);
+  padding: 0;
+}
+
+/*slider*/
+.color-text{
+  color: var(--wp--preset--color--primary) !important;
+}
+.header-search-box .wp-block-search__inside-wrapper,
+.header-search-box .wp-block-search__button{
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+.header-search-box .wp-block-search__button svg{
+  color: var(--wp--preset--color--heading);
+  rotate: 270deg;
+}
+.header-search-box .wp-block-search__input{
+  width: 60%;
+}
+
+.bnr-small-text {
+  display: inline-block;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+}

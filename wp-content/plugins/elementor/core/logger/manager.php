@@ -12,7 +12,7 @@ use Elementor\Modules\System_Info\Module as System_Info;
 use Elementor\Utils;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Manager extends BaseModule {
@@ -118,7 +118,6 @@ class Manager extends BaseModule {
 	 * Log Elementor errors and save them in the database.
 	 *
 	 * Fired by `wp_ajax_elementor_js_log` action.
-	 *
 	 */
 	public function js_log() {
 		/** @var Module $ajax */
@@ -155,8 +154,8 @@ class Manager extends BaseModule {
 		wp_send_json_success();
 	}
 
-	public function register_logger( $name, $class ) {
-		$this->loggers[ $name ] = $class;
+	public function register_logger( $name, $class_name ) {
+		$this->loggers[ $name ] = $class_name;
 	}
 
 	public function set_default_logger( $name ) {
@@ -201,7 +200,7 @@ class Manager extends BaseModule {
 
 	/**
 	 * @param string $message
-	 * @param array $args
+	 * @param array  $args
 	 *
 	 * @return void
 	 */
@@ -211,7 +210,7 @@ class Manager extends BaseModule {
 
 	/**
 	 * @param string $message
-	 * @param array $args
+	 * @param array  $args
 	 *
 	 * @return void
 	 */
@@ -221,7 +220,7 @@ class Manager extends BaseModule {
 
 	/**
 	 * @param string $message
-	 * @param array $args
+	 * @param array  $args
 	 *
 	 * @return void
 	 */
@@ -231,7 +230,7 @@ class Manager extends BaseModule {
 
 	/**
 	 * @param string $message
-	 * @param array $args
+	 * @param array  $args
 	 *
 	 * @return void
 	 */
@@ -247,7 +246,6 @@ class Manager extends BaseModule {
 			E_COMPILE_ERROR => Logger_Interface::LEVEL_ERROR,
 			E_RECOVERABLE_ERROR => Logger_Interface::LEVEL_ERROR,
 			E_PARSE => Logger_Interface::LEVEL_ERROR,
-			E_STRICT => Logger_Interface::LEVEL_ERROR,
 
 			E_WARNING => Logger_Interface::LEVEL_WARNING,
 			E_USER_WARNING => Logger_Interface::LEVEL_WARNING,

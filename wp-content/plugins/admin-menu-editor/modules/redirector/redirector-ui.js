@@ -18,20 +18,23 @@ var AmeRedirectorUi;
     class AbstractTriggerDictionary {
     }
     const DefaultActorId = 'special:default';
-    const defaultActor = {
+    const defaultActor = new class {
         getDisplayName() {
             return 'Default';
-        },
+        }
         getId() {
             return DefaultActorId;
-        },
+        }
         isUser() {
             return false;
-        },
+        }
         hasOwnCap(_) {
             return null;
         }
-    };
+        getOwnCapabilities() {
+            return null;
+        }
+    }();
     class Redirect {
         constructor(properties, actorProvider = null) {
             this.actorId = properties.actorId;
@@ -75,20 +78,23 @@ var AmeRedirectorUi;
                         console.warn('Redirect constructor - Actor not found: ', this.actorId);
                     }
                     const missingActorId = this.actorId;
-                    this.actor = {
+                    this.actor = new class {
                         getDisplayName() {
                             return 'Missing role or user';
-                        },
+                        }
                         getId() {
                             return missingActorId;
-                        },
+                        }
                         isUser() {
                             return false;
-                        },
+                        }
                         hasOwnCap(_) {
                             return null;
                         }
-                    };
+                        getOwnCapabilities() {
+                            return null;
+                        }
+                    }();
                 }
             }
             this.actorTypeNoun = ko.pureComputed(() => {
@@ -310,7 +316,7 @@ var AmeRedirectorUi;
             else if (this.placeholders.hasOwnProperty(actorId)) {
                 return this.placeholders[actorId];
             }
-            //If the actor hasn't been loaded or created by now, that means it has been deleted
+            //If the actor hasn't been loaded or created by now, that means it has been deleted,
             //or it was invalid to begin with. Let's use a placeholder object to represent it.
             let missingActor;
             if (_.startsWith(actorId, 'user:')) {
@@ -359,6 +365,9 @@ var AmeRedirectorUi;
             return false;
         }
         hasOwnCap(_) {
+            return null;
+        }
+        getOwnCapabilities() {
             return null;
         }
     }
@@ -514,8 +523,11 @@ var AmeRedirectorUi;
             if (settings.hasMoreUsers) {
                 this.userSelectionUi = 'search';
             }
-            this.isSaving = ko.observable(false);
-            this.settingsData = ko.observable('');
+            this.saveSettingsForm = new AmeKoFreeExtensions.SaveSettingsForm({
+                ...settings.saveFormConfig,
+                settingsGetter: () => this.getSettings(),
+                extraFields: [['selectedTrigger', this.selectedTrigger]]
+            });
             this.isLoaded(true);
         }
         getSettings() {
@@ -646,11 +658,6 @@ var AmeRedirectorUi;
         isMissingActor(actor) {
             return (actor instanceof MissingActorPlaceholder);
         }
-        saveChanges() {
-            this.isSaving(true);
-            this.settingsData(ko.toJSON(this.getSettings()));
-            return true;
-        }
         addTestData() {
             //Add some test data.
             this.redirects.push(new Redirect({
@@ -723,13 +730,22 @@ jQuery(function ($) {
             jQuery(element).autocomplete({
                 minLength: 2,
                 source: function (request, response) {
-                    const action = AjawV1.getAction('ws-ame-rui-search-users');
+                    const action = AjawV2.getAction('ws-ame-rui-search-users');
                     action.get({ term: request.term }, function (results) {
-                        //Filter received users.
-                        if (options.filter) {
-                            results = options.filter(results);
+                        if (Array.isArray(results)) {
+                            let resultsAsArray = results;
+                            //Filter received users.
+                            if (options.filter) {
+                                resultsAsArray = options.filter(resultsAsArray);
+                            }
+                            response(resultsAsArray);
                         }
-                        response(results);
+                        else {
+                            response([]);
+                            if (console && console.warn) {
+                                console.warn('Invalid response from the server (not an array):', results);
+                            }
+                        }
                     }, function (error) {
                         response([]);
                         if (console && console.error) {

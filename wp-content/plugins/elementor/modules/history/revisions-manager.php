@@ -247,7 +247,7 @@ class Revisions_Manager {
 	 * @param $data
 	 *
 	 * @return array
-	 * @throws \Exception
+	 * @throws \Exception If the revision ID is not set.
 	 */
 	public static function ajax_get_revision_data( array $data ) {
 		if ( ! isset( $data['id'] ) ) {
@@ -278,7 +278,7 @@ class Revisions_Manager {
 	 * @since 2.0.0
 	 * @access public
 	 * @static
-	 * @param array $return_data
+	 * @param array    $return_data
 	 * @param Document $document
 	 *
 	 * @return array
@@ -357,7 +357,7 @@ class Revisions_Manager {
 	}
 
 	/**
-	 * @throws \Exception
+	 * @throws \Exception If the user doesn't have permissions or not found.
 	 */
 	public static function ajax_get_revisions( $data ) {
 		Plugin::$instance->documents->check_permissions( $data['editor_post_id'] );

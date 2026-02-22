@@ -1,0 +1,99 @@
+.tab-st-content { display: none; }
+.tab-st-content.active { display: block; }
+.tab-st-button.active {
+    background: #0073aa;
+    color: #fff;
+}
+.tab-st-button {
+    padding: 8px 16px;
+    margin-right: 5px;
+    border: none;
+    cursor: pointer;
+    background: #f1f1f1;
+}
+
+.tab-st-section {
+    display: flex;
+    justify-content: flex-start; 
+    align-items: center;
+    padding: 0;
+}
+.toplevel_page_cretats-theme-showcase #cretats-popup-content {
+    display: none;
+}
+
+.toplevel_page_cretats-theme-showcase #cretats-popup-overlay {
+    display: none;
+}
+
+.toplevel_page_cretats-theme-showcase .menu-icon-cretats_testimonial .wp-menu-image img {
+    height: 30px !important;
+}
+
+.menu-icon-cretats_testimonial .wp-menu-image img {
+    height: 20px !important;
+}
+
+#adminmenu .menu-icon-cretats_testimonial.wp-has-current-submenu .wp-menu-image img,
+#adminmenu .menu-icon-cretats_testimonial.current .wp-menu-image img{
+    height: 28px !important;
+
+}
+.cretats-copy-shortcode {
+    cursor: pointer;
+    color: #0073aa;
+    
+}
+
+#cretats_sequence{
+    width: 100%;
+    
+}
+
+/* Creta Testimonial Layout Selector Styles */
+.cretats-layout-selector .layout-preview {
+    width: 100px;
+    height: 50px;
+    margin-top: 0.5rem; /* Matches Bootstrap's mt-2 */
+    object-fit: cover; /* Optional for better image appearance */
+}
+
+.cretats-layout-selector .layout-label {
+    margin-top: 0.25rem; /* Matches Bootstrap's mt-1 */
+    font-size: 0.85rem;
+    display: block;
+    text-align: center;
+}
+
+.cretats-layout-option {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.cretats-layout-option:hover {
+    transform: scale(1.03);
+}
+
+/* Form fields full-width override */
+.cretats-full-width {
+    width: 100%;
+}
+
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.color-picker,
+.bg-color-picker,
+.block-bg-color-picker {
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+}
+
+/* Optional: ensure consistent spacing between fields */
+.col-md-4,
+.col-md-6 {
+    margin-bottom: 1rem;
+}

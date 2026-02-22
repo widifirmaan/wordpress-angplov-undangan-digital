@@ -3,6 +3,7 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 class ImageSelector extends ClassicControl {
@@ -12,12 +13,12 @@ class ImageSelector extends ClassicControl {
 	/**
 	 * @var \YahnisElsts\AdminMenuEditor\Customizable\Settings\ImageSetting
 	 */
-	protected $mainSetting;
+	protected $mainBinding;
 
-	public function renderContent(Renderer $renderer) {
+	public function renderContent(Renderer $renderer, Context $context) {
 		self::enqueueDependencies();
 
-		$attachmentId = $this->mainSetting->getChildValue('attachmentId', 0);
+		$attachmentId = $this->mainBinding->getChildValue('attachmentId', 0);
 		if ( !empty($attachmentId) ) {
 			//Verify that the attachment exists.
 			$attachmentUrl = wp_get_attachment_image_url($attachmentId, 'full');
@@ -26,13 +27,13 @@ class ImageSelector extends ClassicControl {
 			}
 		}
 
-		$externalUrlsAllowed = $this->mainSetting->areExternalUrlsAllowed();
-		$externalUrl = $this->mainSetting->getChildValue('externalUrl', '');
+		$externalUrlsAllowed = $this->mainBinding->areExternalUrlsAllowed();
+		$externalUrl = $this->mainBinding->getChildValue('externalUrl', '');
 
-		$imageUrl = $this->mainSetting->getImageUrl();
+		$imageUrl = $this->mainBinding->getImageUrl();
 
-		$canSelectAttachment = $this->isEnabled() && current_user_can('upload_files');
-		$canSelectExternalUrl = $this->isEnabled() && $externalUrlsAllowed;
+		$canSelectAttachment = $this->isEnabled($context) && current_user_can('upload_files');
+		$canSelectExternalUrl = $this->isEnabled($context) && $externalUrlsAllowed;
 
 		echo HtmlHelper::tag('div', [
 			'class'     => 'ame-image-selector-v2',
@@ -61,22 +62,22 @@ class ImageSelector extends ClassicControl {
 		<?php
 		echo HtmlHelper::tag('input', array(
 			'type'  => 'hidden',
-			'name'  => $this->getFieldName('attachmentId'),
+			'name'  => $this->getFieldName($context, 'attachmentId'),
 			'value' => $attachmentId,
 			'class' => 'ame-image-attachment-id',
 		));
 		echo HtmlHelper::tag('input', array(
 			'type'  => 'hidden',
-			'name'  => $this->getFieldName('attachmentSiteId'),
-			'value' => $this->mainSetting['attachmentSiteId']->getValue(0),
+			'name'  => $this->getFieldName($context, 'attachmentSiteId'),
+			'value' => $this->mainBinding['attachmentSiteId']->getValue(0),
 			'class' => 'ame-image-attachment-site-id',
 		));
 		//Attachment URL will usually be overwritten on the server side, but it's useful
 		//for screens that don't trigger server-side post-processing (e.g. the "Style" dialog).
 		echo HtmlHelper::tag('input', array(
 			'type'  => 'hidden',
-			'name'  => $this->getFieldName('attachmentUrl'),
-			'value' => $this->mainSetting['attachmentUrl']->getValue(''),
+			'name'  => $this->getFieldName($context, 'attachmentUrl'),
+			'value' => $this->mainBinding['attachmentUrl']->getValue(''),
 			'class' => 'ame-image-attachment-url',
 		));
 		?>
@@ -90,7 +91,7 @@ class ImageSelector extends ClassicControl {
 					<?php
 					echo HtmlHelper::tag('input', array(
 						'type'        => 'text',
-						'name'        => $this->getFieldName('externalUrl'),
+						'name'        => $this->getFieldName($context, 'externalUrl'),
 						'value'       => $externalUrl,
 						'class'       => 'regular-text large-text code ame-external-image-url',
 						'placeholder' => 'Image URL',
@@ -104,8 +105,8 @@ class ImageSelector extends ClassicControl {
 			foreach (array('width', 'height') as $dimension) {
 				echo HtmlHelper::tag('input', array(
 					'type'  => 'hidden',
-					'name'  => $this->getFieldName($dimension),
-					'value' => $this->mainSetting->getChildValue($dimension, ''),
+					'name'  => $this->getFieldName($context, $dimension),
+					'value' => $this->mainBinding->getChildValue($dimension, ''),
 					'class' => 'ame-detected-image-' . $dimension,
 				));
 			}
@@ -122,7 +123,7 @@ class ImageSelector extends ClassicControl {
 				       value="Set External URL" <?php disabled(!$canSelectExternalUrl); ?>>
 			<?php endif; ?>
 			<a href="#" class="ame-remove-image-link" data-ac-label="Remove" <?php
-			if ( (!$this->isEnabled()) || (empty($attachmentId) && empty($externalUrl)) ) {
+			if ( (!$this->isEnabled($context)) || (empty($attachmentId) && empty($externalUrl)) ) {
 				echo ' style="display: none;" ';
 			}
 			?>>Remove Image</a>
@@ -155,9 +156,9 @@ class ImageSelector extends ClassicControl {
 		);
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
-		$params['externalUrlsAllowed'] = $this->mainSetting->areExternalUrlsAllowed();
+		$params['externalUrlsAllowed'] = $this->mainBinding->areExternalUrlsAllowed();
 		$params['canSelectMedia'] = current_user_can('upload_files');
 		return $params;
 	}

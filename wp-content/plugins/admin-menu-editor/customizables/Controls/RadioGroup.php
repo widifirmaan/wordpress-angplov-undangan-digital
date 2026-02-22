@@ -3,6 +3,7 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 //TODO: Could this conceivably be a subclass of ControlGroup? It can generate the controls dynamically.
@@ -27,8 +28,8 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 	 */
 	protected $choiceChildren = [];
 
-	public function __construct($settings = [], $params = []) {
-		parent::__construct($settings, $params);
+	public function __construct($settings = [], $params = [], $children = []) {
+		parent::__construct($settings, $params, $children);
 
 		if ( isset($params['choiceChildren']) ) {
 			$this->choiceChildren = $params['choiceChildren'];
@@ -55,9 +56,9 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
-		$fieldName = $this->getFieldName();
-		$currentValue = $this->mainSetting->getValue();
+	public function renderContent(Renderer $renderer, Context $context) {
+		$fieldName = $this->getFieldName($context);
+		$currentValue = $this->getMainSettingValue(null, $context);
 
 		$classes = $this->classes;
 		$hasNestedControls = !empty($this->choiceChildren);
@@ -80,7 +81,7 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 			[
 				'class'     => $classes,
 				'style'     => $this->styles,
-				'disabled'  => !$this->isEnabled(),
+				'disabled'  => !$this->isEnabled($context),
 				'data-bind' => $this->makeKoDataBind($this->getKoEnableBinding()),
 			]
 		);
@@ -99,8 +100,8 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 				array_merge([
 					'type'      => 'radio',
 					'name'      => $fieldName,
-					'value'     => $this->mainSetting->encodeForForm($option->value),
-					'class'     => $this->inputClasses,
+					'value'     => $this->mainBinding->encodeForForm($option->value),
+					'class'     => $this->getInputClasses($context),
 					'checked'   => $isChecked,
 					'disabled'  => !$option->enabled,
 					'id'        => $this->getRadioInputId($option),
@@ -130,12 +131,14 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 			if ( isset($this->choiceChildren[$option->value]) ) {
 				$childControl = $this->choiceChildren[$option->value];
 				echo HtmlHelper::tag('span', ['class' => 'ame-rg-nested-control']);
-				$renderer->renderControl($childControl);
+				$renderer->renderControl($childControl, $context);
 				echo '</span>';
 			}
 		}
 		echo '</fieldset>';
 		//phpcs:enable
+
+		static::enqueueDependencies();
 	}
 
 	/**
@@ -150,18 +153,18 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 		return self::INPUT_ID_PREFIX . $this->instanceNumber . '-';
 	}
 
-	public function serializeForJs() {
-		$result = parent::serializeForJs();
+	public function serializeForJs(Context $context): array {
+		$result = parent::serializeForJs($context);
 		if ( !isset($result['children']) ) {
 			$result['children'] = [];
 			foreach ($this->choiceChildren as $child) {
-				$result['children'][] = $child->serializeForJs();
+				$result['children'][] = $child->serializeForJs($context);
 			}
 		}
 		return $result;
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
 
 		$hasNestedControls = !empty($this->choiceChildren);
@@ -183,12 +186,12 @@ class RadioGroup extends ChoiceControl implements ControlContainer {
 		return $params;
 	}
 
-	public function getChildren() {
-		return $this->choiceChildren;
+	public function getChildren(): array {
+		return array_unique(array_merge(array_values($this->choiceChildren), $this->children), SORT_REGULAR);
 	}
 
 	public function getAllDescendants() {
-		foreach ($this->choiceChildren as $child) {
+		foreach ($this->getChildren() as $child) {
 			yield $child;
 			if ( $child instanceof ControlContainer ) {
 				yield from $child->getAllDescendants();

@@ -3,8 +3,6 @@
  * Astra Theme Customizer Configuration Builder.
  *
  * @package     astra-builder
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       3.0.0
  */
@@ -20,7 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 3.0.0
  */
 class Astra_Html_Component_Configs {
-
 	/**
 	 * Register Builder Customizer Configurations.
 	 *
@@ -179,7 +176,7 @@ class Astra_Html_Component_Configs {
 					'priority' => 109,
 					'settings' => array(),
 					'context'  => Astra_Builder_Helper::$design_tab,
-					'divider'  => array( 'ast_class' => 'ast-section-spacing' ),
+					'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
 				),
 
 				/**
@@ -235,10 +232,8 @@ class Astra_Html_Component_Configs {
 			$html_config[] = $_configs;
 		}
 
-		$html_config    = call_user_func_array( 'array_merge', $html_config + array( array() ) );
-		$configurations = array_merge( $configurations, $html_config );
-
-		return $configurations;
+		$html_config = call_user_func_array( 'array_merge', $html_config + array( array() ) );
+		return array_merge( $configurations, $html_config );
 	}
 }
 

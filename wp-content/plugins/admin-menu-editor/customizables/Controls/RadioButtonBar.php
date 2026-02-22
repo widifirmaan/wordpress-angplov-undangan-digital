@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 class RadioButtonBar extends ChoiceControl {
@@ -12,9 +13,9 @@ class RadioButtonBar extends ChoiceControl {
 
 	protected $controlClass = 'ame-radio-button-bar-control';
 
-	public function renderContent(Renderer $renderer) {
-		$fieldName = $this->getFieldName();
-		$currentValue = $this->mainSetting->getValue();
+	public function renderContent(Renderer $renderer, Context $context) {
+		$fieldName = $this->getFieldName($context);
+		$currentValue = $this->mainBinding->getValue();
 
 		//phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $this->buildTag(
@@ -22,7 +23,7 @@ class RadioButtonBar extends ChoiceControl {
 			[
 				'class'     => array_merge([$this->controlClass], $this->classes),
 				'style'     => $this->styles,
-				'disabled'  => !$this->isEnabled(),
+				'disabled'  => !$this->isEnabled($context),
 				'data-bind' => $this->makeKoDataBind($this->getKoEnableBinding()),
 			]
 		);
@@ -39,8 +40,8 @@ class RadioButtonBar extends ChoiceControl {
 				array_merge(array(
 					'type'      => 'radio',
 					'name'      => $fieldName,
-					'value'     => $this->mainSetting->encodeForForm($option->value),
-					'class'     => $this->inputClasses,
+					'value'     => $this->mainBinding->encodeForForm($option->value),
+					'class'     => $this->getInputClasses($context),
 					'checked'   => $isChecked,
 					'disabled'  => !$option->enabled,
 					'data-bind' => $this->makeKoDataBind([

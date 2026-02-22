@@ -2,31 +2,16 @@
 namespace Elementor\Modules\LazyLoad;
 
 use Elementor\Core\Base\Module as BaseModule;
-use Elementor\Core\Experiments\Manager as Experiments_Manager;
 use Elementor\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Module extends BaseModule {
 
-	const EXPERIMENT_NAME = 'e_lazyload';
-
 	public function get_name() {
 		return 'lazyload';
-	}
-
-	public static function get_experimental_data() {
-		return [
-			'name' => static::EXPERIMENT_NAME,
-			'title' => esc_html__( 'Lazy Load Background Images', 'elementor' ),
-			'tag' => esc_html__( 'Performance', 'elementor' ),
-			'description' => esc_html__( 'Lazy loading images that are not in the viewport improves initial page load performance and user experience. By activating this experiment all background images except the first one on your page will be lazy loaded to improve your LCP score', 'elementor' ),
-			'release_status' => Experiments_Manager::RELEASE_STATUS_STABLE,
-			'default' => Experiments_Manager::STATE_ACTIVE,
-			'generator_tag' => true,
-		];
 	}
 
 	public function __construct() {
@@ -36,8 +21,12 @@ class Module extends BaseModule {
 	}
 
 	public function init() {
+		if ( ! $this->is_lazy_load_background_images_enabled() ) {
+			return;
+		}
+
 		add_action( 'wp_head', function() {
-			if ( ! $this->should_lazyload() ) {
+			if ( ! $this->should_lazy_load_background_images() ) {
 				return;
 			}
 			?>
@@ -63,11 +52,11 @@ class Module extends BaseModule {
 		} );
 
 		add_action( 'wp_footer', function() {
-			if ( ! $this->should_lazyload() ) {
+			if ( ! $this->should_lazy_load_background_images() ) {
 				return;
 			}
 			?>
-			<script type='text/javascript'>
+			<script>
 				const lazyloadRunObserver = () => {
 					const lazyloadBackgrounds = document.querySelectorAll( `.e-con.e-parent:not(.e-lazyloaded)` );
 					const lazyloadBackgroundObserver = new IntersectionObserver( ( entries ) => {
@@ -97,7 +86,11 @@ class Module extends BaseModule {
 		} );
 	}
 
-	private function should_lazyload() {
+	private function should_lazy_load_background_images(): bool {
 		return ! is_admin() && ! Plugin::$instance->preview->is_preview_mode() && ! Plugin::$instance->editor->is_edit_mode();
+	}
+
+	private static function is_lazy_load_background_images_enabled(): bool {
+		return '1' === get_option( 'elementor_lazy_load_background_images', '1' );
 	}
 }

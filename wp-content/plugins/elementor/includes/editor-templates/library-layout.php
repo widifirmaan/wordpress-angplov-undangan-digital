@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 ?>
 <script type="text/template" id="tmpl-elementor-templates-modal__header">
@@ -12,9 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<# if ( 'skip' === closeType ) { #>
 				<span><?php echo esc_html__( 'Skip', 'elementor' ); ?></span>
 				<# } #>
-				<i class="eicon-close"
-				   aria-hidden="true"
-				   title="{{{ $e.components?.get( 'document/elements' )?.utils?.getTitleForLibraryClose() }}}"></i>
+				<i class="eicon-close" aria-hidden="true"></i>
 				<span class="elementor-screen-only">{{{ $e.components?.get( 'document/elements' )?.utils?.getTitleForLibraryClose() }}}</span>
 			</div>
 		<# } #>
@@ -24,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 <script type="text/template" id="tmpl-elementor-templates-modal__header__logo">
 	<span class="elementor-templates-modal__header__logo__icon-wrapper e-logo-wrapper">
-		<i class="eicon-elementor"></i>
+		<i class="eicon-elementor-circle"></i>
 	</span>
 	<span class="elementor-templates-modal__header__logo__title">{{{ title }}}</span>
 </script>

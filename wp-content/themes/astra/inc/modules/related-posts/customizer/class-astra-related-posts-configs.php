@@ -3,8 +3,6 @@
  * Related Posts Options for Astra Theme.
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2021, Astra
  * @link        https://wpastra.com/
  * @since       Astra 3.5.0
  */
@@ -22,7 +20,6 @@ if ( ! class_exists( 'Astra_Customizer_Config_Base' ) ) {
  * Register Related Posts Configurations.
  */
 class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
-
 	/**
 	 * Register Related Posts Configurations.
 	 *
@@ -91,6 +88,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'control'  => 'ast-heading',
 				'title'    => __( 'Related Posts', 'astra' ),
 				'priority' => 10,
+				'divider'  => array( 'ast_class' => 'ast-top-section-divider' ),
 			),
 
 			array(
@@ -165,7 +163,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'control'    => 'ast-selector',
 				'priority'   => 11,
 				'responsive' => false,
-				'divider'    => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'    => array( 'ast_class' => 'ast-top-divider' ),
 				'context'    => array(
 					Astra_Builder_Helper::$general_tab_config,
 					'relation' => 'AND',
@@ -209,7 +207,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'title'             => __( 'Posts Structure', 'astra' ),
 
 				'choices'           => $related_structure_sub_controls,
-				'divider'           => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-top-divider' ),
 			),
 			/**
 			 * Option: Meta Data Separator.
@@ -264,7 +262,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					),
 					$meta_config_options
 				),
-				'divider'           => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-top-divider' ),
 			),
 			array(
 				'name'                   => 'related-posts-image-ratio-type',
@@ -361,7 +359,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'section'  => 'ast-sub-section-related-posts',
 				'priority' => 14,
 				'label'    => '',
-				'help'     => sprintf( /* translators: 1: link open markup, 2: link close markup */ __( 'Calculate a personalized image ratio using this %1$s online tool %2$s for your image dimensions.', 'astra' ), '<a href="https://www.digitalrebellion.com/webapps/aspectcalc" target="_blank">', '</a>' ),
+				'help'     => sprintf( /* translators: 1: link open markup, 2: link close markup */ __( 'Calculate a personalized image ratio using this %1$s online tool %2$s for your image dimensions.', 'astra' ), '<a href="' . esc_url( 'https://www.digitalrebellion.com/webapps/aspectcalc' ) . '" target="_blank">', '</a>' ),
 			),
 			array(
 				'name'        => 'related-posts-image-size',
@@ -373,7 +371,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'priority'    => 17,
 				'transport'   => 'postMessage',
 				'title'       => __( 'Image Size', 'astra' ),
-				'divider'     => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'     => array( 'ast_class' => 'ast-top-divider' ),
 				'control'     => 'ast-select',
 				'choices'     => astra_get_site_image_sizes(),
 				'description' => __( 'Note: Image Size & Ratio won\'t work if Image Position set as Background.', 'astra' ),
@@ -386,7 +384,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'type'      => 'sub-control',
 				'control'   => 'ast-text-input',
 				'section'   => 'ast-sub-section-related-posts',
-				'divider'   => array( 'ast_class' => 'ast-bottom-dotted-divider ast-bottom-section-spacing' ),
+				'divider'   => array( 'ast_class' => 'ast-bottom-divider ast-bottom-section-spacing' ),
 				'title'     => __( 'Prefix Label', 'astra' ),
 				'priority'  => 1,
 				'transport' => 'postMessage',
@@ -436,7 +434,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					'published' => __( 'Published', 'astra' ),
 					'updated'   => __( 'Last Updated', 'astra' ),
 				),
-				'divider'    => array( 'ast_class' => 'ast-bottom-dotted-divider ast-bottom-spacing' ),
+				'divider'    => array( 'ast_class' => 'ast-bottom-divider ast-bottom-spacing' ),
 				'responsive' => false,
 				'renderAs'   => 'text',
 			),
@@ -518,7 +516,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 						'value'    => true,
 					),
 				),
-				'divider'  => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'  => array( 'ast_class' => 'ast-top-divider' ),
 			),
 
 			/**
@@ -578,7 +576,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					'step' => 1,
 					'max'  => 20,
 				),
-				'divider'     => array( 'ast_class' => 'ast-top-dotted-divider ast-bottom-dotted-divider' ),
+				'divider'     => array( 'ast_class' => 'ast-top-divider ast-bottom-divider' ),
 			),
 
 			/**
@@ -608,7 +606,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				),
 				'responsive' => true,
 				'renderAs'   => 'text',
-				'divider'    => array( 'ast_class' => 'ast-bottom-dotted-divider' ),
+				'divider'    => array( 'ast_class' => 'ast-bottom-divider' ),
 			),
 
 			/**
@@ -645,7 +643,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'section'    => 'ast-sub-section-related-posts',
 				'priority'   => 1,
 				'control'    => 'ast-selector',
-				'divider'    => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'    => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 				'title'      => __( 'Related Posts by', 'astra' ),
 				'choices'    => array(
 					'categories' => __( 'Categories', 'astra' ),
@@ -664,7 +662,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'parent'    => ASTRA_THEME_SETTINGS . '[related-posts-query-group]',
 				'section'   => 'ast-sub-section-related-posts',
 				'type'      => 'sub-control',
-				'divider'   => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'   => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 				'priority'  => 2,
 				'transport' => 'postMessage',
 				'title'     => __( 'Order by', 'astra' ),
@@ -708,7 +706,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'title'       => __( 'Section Placement', 'astra' ),
 				'control'     => 'ast-selector',
 				'description' => __( 'Decide whether to isolate or integrate the module with the entry content area.', 'astra' ),
-				'divider'     => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'     => array( 'ast_class' => 'ast-top-divider' ),
 				'choices'     => array(
 					'default' => __( 'Default', 'astra' ),
 					'inside'  => __( 'Contained', 'astra' ),
@@ -813,6 +811,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'title'     => __( 'Content Colors', 'astra' ),
 				'section'   => 'ast-sub-section-related-posts',
 				'priority'  => 15,
+				'divider'   => array( 'ast_class' => 'ast-bottom-divider' ),
 			),
 
 			/**
@@ -823,6 +822,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'type'      => 'control',
 				'priority'  => 16,
 				'control'   => 'ast-settings-group',
+				'is_font'   => true,
 				'context'   => array(
 					Astra_Builder_Helper::$design_tab_config,
 					'relation' => 'AND',
@@ -865,6 +865,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					),
 				),
 				'title'     => __( 'Post Title Font', 'astra' ),
+				'is_font'   => true,
 				'section'   => 'ast-sub-section-related-posts',
 				'transport' => 'postMessage',
 			),
@@ -892,6 +893,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					),
 				),
 				'title'     => __( 'Meta Font', 'astra' ),
+				'is_font'   => true,
 				'section'   => 'ast-sub-section-related-posts',
 				'transport' => 'postMessage',
 			),
@@ -904,6 +906,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'type'      => 'control',
 				'priority'  => 21,
 				'control'   => 'ast-settings-group',
+				'is_font'   => true,
 				'context'   => array(
 					Astra_Builder_Helper::$design_tab_config,
 					'relation' => 'AND',
@@ -1004,7 +1007,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 					),
 				),
 				'title'             => __( 'Section Background', 'astra' ),
-				'divider'           => array( 'ast_class' => 'ast-bottom-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-bottom-divider' ),
 			),
 
 			/**
@@ -1065,7 +1068,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'   => astra_get_option( 'related-posts-title-font-family' ),
 				'title'     => __( 'Font Family', 'astra' ),
 				'connect'   => ASTRA_THEME_SETTINGS . '[related-posts-title-font-weight]',
-				'divider'   => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'   => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1082,7 +1085,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'           => astra_get_option( 'related-posts-title-font-weight' ),
 				'title'             => __( 'Font Weight', 'astra' ),
 				'connect'           => 'related-posts-title-font-family',
-				'divider'           => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1125,18 +1128,17 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 			),
 
 			/**
-				 * Option: Related Posts Title Font Extras
-				 */
-				array(
-					'name'    => 'related-posts-title-font-extras',
-					'type'    => 'sub-control',
-					'parent'  => ASTRA_THEME_SETTINGS . '[related-posts-title-typography-group]',
-					'control' => 'ast-font-extras',
-					'section' => 'ast-sub-section-related-posts',
-					'default' => astra_get_option( 'related-posts-title-font-extras' ),
-					'title'   => __( 'Font Extras', 'astra' ),
-				),
-
+			 * Option: Related Posts Title Font Extras
+			 */
+			array(
+				'name'    => 'related-posts-title-font-extras',
+				'type'    => 'sub-control',
+				'parent'  => ASTRA_THEME_SETTINGS . '[related-posts-title-typography-group]',
+				'control' => 'ast-font-extras',
+				'section' => 'ast-sub-section-related-posts',
+				'default' => astra_get_option( 'related-posts-title-font-extras' ),
+				'title'   => __( 'Font Extras', 'astra' ),
+			),
 
 			/**
 			 * Option: Related Posts Title Font Family
@@ -1151,7 +1153,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'   => astra_get_option( 'related-posts-section-title-font-family' ),
 				'title'     => __( 'Font Family', 'astra' ),
 				'connect'   => ASTRA_THEME_SETTINGS . '[related-posts-section-title-font-weight]',
-				'divider'   => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'   => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1168,7 +1170,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'           => astra_get_option( 'related-posts-section-title-font-weight' ),
 				'title'             => __( 'Font Weight', 'astra' ),
 				'connect'           => 'related-posts-section-title-font-family',
-				'divider'           => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1211,17 +1213,17 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 			),
 
 			/**
-				 * Option: Related Posts Title Font Extras
-				 */
-				array(
-					'name'    => 'related-posts-section-title-font-extras',
-					'type'    => 'sub-control',
-					'parent'  => ASTRA_THEME_SETTINGS . '[related-posts-section-title-typography-group]',
-					'control' => 'ast-font-extras',
-					'section' => 'ast-sub-section-related-posts',
-					'default' => astra_get_option( 'related-posts-section-title-font-extras' ),
-					'title'   => __( 'Font Extras', 'astra' ),
-				),
+			 * Option: Related Posts Title Font Extras
+			 */
+			array(
+				'name'    => 'related-posts-section-title-font-extras',
+				'type'    => 'sub-control',
+				'parent'  => ASTRA_THEME_SETTINGS . '[related-posts-section-title-typography-group]',
+				'control' => 'ast-font-extras',
+				'section' => 'ast-sub-section-related-posts',
+				'default' => astra_get_option( 'related-posts-section-title-font-extras' ),
+				'title'   => __( 'Font Extras', 'astra' ),
+			),
 
 			/**
 			 * Option: Related Posts Meta Font Family
@@ -1236,7 +1238,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'   => astra_get_option( 'related-posts-meta-font-family' ),
 				'title'     => __( 'Font Family', 'astra' ),
 				'connect'   => ASTRA_THEME_SETTINGS . '[related-posts-meta-font-weight]',
-				'divider'   => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'   => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1253,7 +1255,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'           => astra_get_option( 'related-posts-meta-font-weight' ),
 				'title'             => __( 'Font Weight', 'astra' ),
 				'connect'           => 'related-posts-meta-font-family',
-				'divider'           => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1321,7 +1323,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'   => astra_get_option( 'related-posts-content-font-family' ),
 				'title'     => __( 'Font Family', 'astra' ),
 				'connect'   => ASTRA_THEME_SETTINGS . '[related-posts-content-font-weight]',
-				'divider'   => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'   => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1338,7 +1340,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 				'default'           => astra_get_option( 'related-posts-content-font-weight' ),
 				'title'             => __( 'Font Weight', 'astra' ),
 				'connect'           => 'related-posts-content-font-family',
-				'divider'           => array( 'ast_class' => 'ast-sub-bottom-dotted-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-sub-bottom-divider' ),
 			),
 
 			/**
@@ -1398,9 +1400,7 @@ class Astra_Related_Posts_Configs extends Astra_Customizer_Config_Base {
 
 		$_configs = array_merge( $_configs, Astra_Extended_Base_Configuration::prepare_section_spacing_border_options( 'ast-sub-section-related-posts' ) );
 
-		$configurations = array_merge( $configurations, $_configs );
-
-		return $configurations;
+		return array_merge( $configurations, $_configs );
 	}
 }
 

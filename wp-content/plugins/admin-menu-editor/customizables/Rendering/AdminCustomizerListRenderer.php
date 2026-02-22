@@ -2,30 +2,37 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Rendering;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Control;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\InterfaceStructure;
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
 use YahnisElsts\AdminMenuEditor\Customizable\Controls\Section;
 use YahnisElsts\AdminMenuEditor\Customizable\Controls\Tooltip;
 
 class AdminCustomizerListRenderer extends Renderer {
 	protected $pendingSections = [];
+	protected $pendingSectionContext = null;
 
-	public function renderStructure($structure) {
+	public function renderStructure(InterfaceStructure $structure) {
+		$context = new Context();
+		$this->pendingSectionContext = $context;
+
 		$rootSection = new Section(
 			$structure->getTitle() ?: 'Root',
-			$structure->getAsSections(),
-			['id' => 'structure-root']
+			['id' => 'structure-root'],
+			$structure->getAsSections()
 		);
-		$this->renderSection($rootSection);
+		$this->renderSection($rootSection, $context);
 	}
 
 	protected function renderPendingSections() {
 		while (!empty($this->pendingSections)) {
 			$section = array_shift($this->pendingSections);
-			$this->renderSection($section);
+			$this->renderSection($section, $this->pendingSectionContext);
 		}
 	}
 
-	public function renderSection($section) {
+	public function renderSection(Section $section, Context $context) {
 		echo HtmlHelper::tag('ul', [
 			'class' => 'ame-ac-section',
 			'id'    => $this->getSectionElementId($section),
@@ -44,13 +51,13 @@ class AdminCustomizerListRenderer extends Renderer {
 		</li>
 		<?php
 
-		$this->renderSectionChildren($section);
+		$this->renderSectionChildren($section, $context);
 		echo '</ul>';
 
 		$this->renderPendingSections();
 	}
 
-	protected function renderChildSection($section) {
+	protected function renderChildSection(Section $section, Context $context) {
 		if ( $section->hasChildren() ) {
 			$this->pendingSections[] = $section;
 		}
@@ -66,7 +73,7 @@ class AdminCustomizerListRenderer extends Renderer {
 		echo '</li>';
 	}
 
-	protected function renderControlGroup($group) {
+	protected function renderControlGroup(ControlGroup $group, Context $context) {
 		$title = $group->getTitle();
 		if ( !empty($title) ) {
 			echo '<li class="ame-ac-control ame-ac-control-group">';
@@ -76,14 +83,14 @@ class AdminCustomizerListRenderer extends Renderer {
 			echo '</li>';
 		}
 
-		$this->renderGroupChildren($group);
+		$this->renderGroupChildren($group, $context);
 	}
 
-	protected function renderUngroupedControl($control) {
-		$this->renderControl($control);
+	protected function renderUngroupedControl(Control $control, Context $context) {
+		$this->renderControl($control, $context);
 	}
 
-	public function renderControl($control, $parentContext = null) {
+	public function renderControl(Control $control, Context $context) {
 		$settings = $control->getSettings();
 		$settingIds = array_map(function ($setting) {
 			return $setting->getId();
@@ -109,10 +116,10 @@ class AdminCustomizerListRenderer extends Renderer {
 			'data-ac-control-type' => $control->getType(),
 		]);
 		if ( !$control->includesOwnLabel() ) {
-			$this->renderControlLabel($control);
+			$this->renderControlLabel($control, $context);
 		}
 
-		parent::renderControl($control, $parentContext);
+		parent::renderControl($control, $context);
 		echo '</li>';
 	}
 
@@ -126,16 +133,17 @@ class AdminCustomizerListRenderer extends Renderer {
 	}
 
 	/**
-	 * @param \YahnisElsts\AdminMenuEditor\Customizable\Controls\Control $control
+	 * @param Control $control
+	 * @param Context $context
 	 * @return void
 	 */
-	protected function renderControlLabel($control) {
-		$label = $control->getLabel();
+	protected function renderControlLabel($control, ?Context $context) {
+		$label = $control->getLabel($context);
 		if ( empty($label) ) {
 			return;
 		}
 
-		$labelForId = $control->getLabelTargetId();
+		$labelForId = $control->getLabelTargetId($context);
 		if ( $control->supportsLabelAssociation() && !empty($labelForId) ) {
 			printf(
 				'<label for="%s" class="ame-ac-control-label">%s</label>',

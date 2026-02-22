@@ -2,37 +2,43 @@
 /**
  * The Third Party integration with the Autoptimize plugin.
  *
- * @since		1.0.12
+ * @since      1.0.12
+ * @package    LiteSpeed
+ * @subpackage LiteSpeed_Cache/thirdparty
  */
+
 namespace LiteSpeed\Thirdparty;
 
-defined('WPINC') || exit();
+defined( 'WPINC' ) || exit;
 
-class Autoptimize
-{
+/**
+ * Integration for Autoptimize cache events.
+ */
+class Autoptimize {
+
 	/**
 	 * Detects if Autoptimize is active.
 	 *
-	 *@since 1.0.12
-	 *@access public
+	 * @since 1.0.12
+	 * @access public
+	 * @return void
 	 */
-	public static function detect()
-	{
-		if (defined('AUTOPTIMIZE_PLUGIN_DIR')) {
-			add_action('litespeed_purge_finalize', __CLASS__ . '::purge');
+	public static function detect() {
+		if ( defined( 'AUTOPTIMIZE_PLUGIN_DIR' ) ) {
+			add_action( 'litespeed_purge_finalize', __CLASS__ . '::purge' );
 		}
 	}
 
 	/**
-	 * Purges the cache when Autoptimize's cache is purged.
+	 * Purges LiteSpeed cache when Autoptimize's cache is purged.
 	 *
 	 * @since 1.0.12
 	 * @access public
+	 * @return void
 	 */
-	public static function purge()
-	{
-		if (defined('AUTOPTIMIZE_PURGE') || has_action('shutdown', 'autoptimize_do_cachepurged_action', 11)) {
-			do_action('litespeed_purge_all', '3rd Autoptimize');
+	public static function purge() {
+		if ( defined( 'AUTOPTIMIZE_PURGE' ) || has_action( 'shutdown', 'autoptimize_do_cachepurged_action', 11 ) ) {
+			do_action( 'litespeed_purge_all', '3rd Autoptimize' );
 		}
 	}
 }

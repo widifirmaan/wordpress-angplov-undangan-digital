@@ -1002,17 +1002,6 @@ function ame_register_sort_buttons($toolbar) {
 
 </div>
 
-<span id="ws-ame-screen-meta-contents" style="display:none;">
-	<label for="ws-hide-advanced-settings">
-		<input type="checkbox" id="ws-hide-advanced-settings"<?php
-			if ( $this->options['hide_advanced_settings'] ){
-				echo ' checked="checked"';
-			}
-		?> /> Hide advanced options
-	</label><br>
-</span>
-
-
 <!-- Confirmation dialog when hiding "Dashboard -> Home" -->
 <div id="ws-ame-dashboard-hide-confirmation" style="display: none;">
 	<span>

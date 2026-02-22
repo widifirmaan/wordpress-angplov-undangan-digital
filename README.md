@@ -8,6 +8,9 @@ Proyek ini adalah platform berbasis WordPress untuk membuat undangan pernikahan 
 - **Ringan**: Menggunakan konfigurasi yang dioptimalkan.
 - **Auto-Config**: Database dan koneksi dikonfigurasi secara otomatis melalui environment variables.
 
+- **Database Siap Pakai**: Database (`init.sql`) akan di-restore secara otomatis ke versi terakhir (termasuk instalasi plugin, tema, dan preferensi WordPress).
+- **Binding Lokal**: Seluruh *source code* (plugin, tema, konfigurasi) berada di map saat ini dan otomatis terbaca oleh kontainer.
+
 ## Persyaratan Sistem
 
 - Docker
@@ -20,16 +23,14 @@ Proyek ini adalah platform berbasis WordPress untuk membuat undangan pernikahan 
    ```bash
    docker compose up -d
    ```
+   > **Catatan:** Pada saat pertama kali dijalankan, proses ini akan memakan waktu sejenak karena image database MariaDB akan melakukan impor otomatis dari file `init.sql`.
 
 2. **Akses Website**:
-   Website dapat diakses melalui browser di alamat:
-   - URL Lokal: [http://localhost:8084](http://localhost:8084)
-   - Domain Konfigurasi: `http://undangan.widifirmaan.web.id`
-
-   *Catatan: Untuk mengakses menggunakan domain konfigurasi di komputer lokal, tambahkan entry berikut ke file `/etc/hosts` (Linux/Mac) atau `C:\Windows\System32\drivers\etc\hosts` (Windows):*
-   ```
-   127.0.0.1 undangan.widifirmaan.web.id
-   ```
+   Setelah kontainer menyala, website sudah dalam keadaan **lengkap terinstal** dan tidak akan meminta *setup wizard* lagi. Website dapat langsung diakses melalui browser di alamat:
+   - URL: [http://localhost:8084](http://localhost:8084)
+   - URL Admin: [http://localhost:8084/wp-admin/](http://localhost:8084/wp-admin/)
+     - Username: `admin` atau sesuai user yang telah Anda buat sebelumnya.
+     - Password: `password_anda`
 
 ## Konfigurasi Teknis
 
@@ -38,21 +39,17 @@ Proyek ini adalah platform berbasis WordPress untuk membuat undangan pernikahan 
 - **Web Server**: Apache (via WordPress image)
 - **PHP Version**: 8.x (sesuai image WordPress terbaru)
 
-### Kredensial Database
-Database dibuat secara otomatis saat pertama kali dijalankan.
+### Kredensial Database Docker
+Database dirancang untuk terkonfigurasi secara otomatis dari file `init.sql`.
 - **Host**: `db`
 - **Database**: `wordpress`
 - **User**: `wordpress`
 - **Password**: `wordpress`
 
-## Catatan Penting
-
-- Jika Anda menjalankan proyek ini untuk pertama kalinya dan tidak ada database backup yang ditemukan, WordPress akan mengarahkan Anda ke halaman instalasi baru.
-- Konfigurasi domain telah diatur di `wp-config.php`.
-
 ## Troubleshooting
 
-Jika terjadi error koneksi database, tunggu beberapa saat karena MariaDB mungkin sedang dalam proses inisialisasi awal. Anda dapat merestart container wordpress dengan:
-```bash
-docker compose restart wordpress
-```
+- Jika terjadi *error koneksi database*, tunggu beberapa detik karena MariaDB masih mengimpor file `init.sql`. Anda dapat memantau prosesnya dengan perintah:
+  ```bash
+  docker compose logs -f db
+  ```
+- Jika ada masalah *permission denied* saat mengunduh/mengupload media atau plugin dari wp-admin, kontainer sudah dikonfigurasikan dengan `user: "33:33"` untuk menyamai www-data. Jika masih gagal, ubah *ownership* file lokal dengan perintah `sudo chown -R 33:33 wp-content/`.

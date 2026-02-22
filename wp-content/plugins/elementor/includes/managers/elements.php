@@ -35,7 +35,7 @@ class Elements_Manager {
 	 *
 	 * @access private
 	 *
-	 * @var
+	 * @var $categories
 	 */
 	private $categories;
 
@@ -67,13 +67,9 @@ class Elements_Manager {
 	 * @return Element_Base|null Element instance if element created, or null
 	 *                           otherwise.
 	 */
-	public function create_element_instance( array $element_data, array $element_args = [], Element_Base $element_type = null ) {
+	public function create_element_instance( array $element_data, array $element_args = [], ?Element_Base $element_type = null ) {
 		if ( null === $element_type ) {
-			if ( 'widget' === $element_data['elType'] ) {
-				$element_type = Plugin::$instance->widgets_manager->get_widget_types( $element_data['widgetType'] );
-			} else {
-				$element_type = $this->get_element_types( $element_data['elType'] );
-			}
+			$element_type = $this->get_element( $element_data['elType'], isset( $element_data['widgetType'] ) ? $element_data['widgetType'] : null );
 		}
 
 		if ( ! $element_type ) {
@@ -88,6 +84,18 @@ class Elements_Manager {
 			$element = new $element_class( $element_data, $args );
 		} catch ( \Exception $e ) {
 			return null;
+		}
+
+		return $element;
+	}
+
+	public function get_element( string $el_type, ?string $widget_type = null ) {
+		$element = null;
+
+		if ( 'widget' === $el_type ) {
+			$element = Plugin::$instance->widgets_manager->get_widget_types( $widget_type );
+		} else {
+			$element = $this->get_element_types( $el_type );
 		}
 
 		return $element;
@@ -276,6 +284,14 @@ class Elements_Manager {
 	 */
 	private function init_categories() {
 		$this->categories = [
+			'v4-elements' => [
+				'title' => esc_html__( 'Atomic Elements', 'elementor' ),
+				'hideIfEmpty' => true,
+			],
+			'atomic-form' => [
+				'title' => esc_html__( 'Atomic Form', 'elementor' ),
+				'hideIfEmpty' => true,
+			],
 			'layout' => [
 				'title' => esc_html__( 'Layout', 'elementor' ),
 				'hideIfEmpty' => true,
@@ -289,6 +305,10 @@ class Elements_Manager {
 				'promotion' => [
 					'url' => esc_url( 'https://go.elementor.com/go-pro-section-pro-widget-panel/' ),
 				],
+			],
+			'helloplus' => [
+				'title' => esc_html__( 'Hello+', 'elementor' ),
+				'hideIfEmpty' => true,
 			],
 			'general' => [
 				'title' => esc_html__( 'General', 'elementor' ),
@@ -344,6 +364,24 @@ class Elements_Manager {
 			'icon' => 'eicon-wordpress',
 			'active' => false,
 		];
+	}
+
+	public function enqueue_elements_styles() {
+		foreach ( $this->get_element_types() as $element ) {
+			$element->enqueue_styles();
+		}
+	}
+
+	public function enqueue_elements_scripts() {
+		foreach ( $this->get_element_types() as $element ) {
+			$element->enqueue_scripts();
+		}
+	}
+
+	public function register_frontend_handlers() {
+		foreach ( $this->get_element_types() as $element ) {
+			$element->register_frontend_handlers();
+		}
 	}
 
 	/**

@@ -24,6 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Manager {
 
+	const ERROR_TEMPLATE_SOURCE_NOT_FOUND = 'Template source not found.';
+	const ERROR_TEMPLATE_IDS_MISSING = 'Template IDs are missing.';
+
 	/**
 	 * Registered template sources.
 	 *
@@ -187,7 +190,7 @@ class Manager {
 	 * Retrieve all the templates from all the registered sources.
 	 *
 	 * @param array $filter_sources
-	 * @param bool $force_update
+	 * @param bool  $force_update
 	 * @return array
 	 */
 	public function get_templates( array $filter_sources = [], bool $force_update = false ): array {
@@ -217,7 +220,9 @@ class Manager {
 	 * @return array Library data.
 	 */
 	public function get_library_data( array $args ) {
-		$library_data = Api::get_library_data( ! empty( $args['sync'] ) );
+		$force_update = ! empty( $args['sync'] );
+
+		$library_data = Api::get_library_data( $force_update );
 
 		if ( empty( $library_data ) ) {
 			return $library_data;
@@ -227,12 +232,19 @@ class Manager {
 		Plugin::$instance->documents->get_document_types();
 
 		$filter_sources = ! empty( $args['filter_sources'] ) ? $args['filter_sources'] : [];
-		$force_update = ! empty( $args['sync'] );
 
-		return [
+		$full_library_data = [
 			'templates' => $this->get_templates( $filter_sources, $force_update ),
 			'config' => $library_data['types_data'],
 		];
+
+		/**
+		 * Filter the full library data.
+		 *
+		 * @since 3.32.2
+		 * @param-out $full_library_data - 'templates' and 'config' data ('config' holds the list of categories).
+		 */
+		return apply_filters( 'elementor/library/full-data', $full_library_data );
 	}
 
 	/**
@@ -254,10 +266,23 @@ class Manager {
 			return $validate_args;
 		}
 
+		$sources = (array) $args['source']; // BC
+		$results = [];
+
+		foreach ( $sources as $source ) {
+			$args_copy = $args;
+			$args_copy['source'] = $source;
+			$results[] = $this->save_template_item( $args_copy );
+		}
+
+		return 1 === count( $results ) ? $results[0] : $results;
+	}
+
+	private function save_template_item( array $args ) {
 		$source = $this->get_source( $args['source'] );
 
 		if ( ! $source ) {
-			return new \WP_Error( 'template_error', 'Template source not found.' );
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
 		}
 
 		$args['content'] = json_decode( $args['content'], true );
@@ -273,6 +298,95 @@ class Manager {
 		}
 
 		return $source->get_item( $template_id );
+	}
+
+	public function move_template( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'from_source', 'from_template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$args['source'] = $args['source'][0];
+
+		$result = $this->move_template_item( $args );
+
+		if ( ! $this->is_action_to_same_source( $args ) ) {
+			$this->delete_template( [
+				'source' => $args['from_source'],
+				'template_id' => $args['from_template_id'],
+			] );
+		}
+
+		return $result;
+	}
+
+	private function move_template_item( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'from_source', 'from_template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		if ( $this->is_action_to_same_source( $args ) ) {
+			return $source->move_template_to_folder( $args );
+		}
+
+		$from_source = $this->get_source( $args['from_source'] );
+
+		if ( ! $from_source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$args = $from_source->format_args_for_single_action( $args );
+
+		$template_id = $source->save_item( $args );
+
+		if ( is_wp_error( $template_id ) ) {
+			return $template_id;
+		}
+
+		return $source->get_item( $template_id );
+	}
+
+	public function copy_template( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'from_source', 'from_template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'][0] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$from_source = $this->get_source( $args['from_source'] );
+
+		if ( ! $from_source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$args = $from_source->format_args_for_single_action( $args );
+
+		$template_id = $source->save_item( $args );
+
+		if ( is_wp_error( $template_id ) ) {
+			return $template_id;
+		}
+
+		return $source->get_item( $template_id );
+	}
+
+	private function is_action_to_same_source( $args ) {
+		return $args['source'] === $args['from_source'];
 	}
 
 	/**
@@ -298,10 +412,32 @@ class Manager {
 		$source = $this->get_source( $template_data['source'] );
 
 		if ( ! $source ) {
-			return new \WP_Error( 'template_error', 'Template source not found.' );
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
 		}
 
 		$template_data['content'] = json_decode( $template_data['content'], true );
+
+		$update = $source->update_item( $template_data );
+
+		if ( is_wp_error( $update ) ) {
+			return $update;
+		}
+
+		return $source->get_item( $template_data['id'] );
+	}
+
+	public function rename_template( array $template_data ) {
+		$validate_args = $this->ensure_args( [ 'source', 'title', 'id' ], $template_data );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $template_data['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
 
 		$update = $source->update_item( $template_data );
 
@@ -355,14 +491,21 @@ class Manager {
 			return $validate_args;
 		}
 
-		if ( isset( $args['edit_mode'] ) ) {
-			Plugin::$instance->editor->set_edit_mode( $args['edit_mode'] );
-		}
-
 		$source = $this->get_source( $args['source'] );
 
 		if ( ! $source ) {
-			return new \WP_Error( 'template_error', 'Template source not found.' );
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		if ( method_exists( $source, 'is_allowed_to_read_template' ) && ! $source->is_allowed_to_read_template( $args ) ) {
+			return new \WP_Error(
+				'template_error',
+				esc_html__( 'You do not have permission to access this template.', 'elementor' )
+			);
+		}
+
+		if ( isset( $args['edit_mode'] ) ) {
+			Plugin::$instance->editor->set_edit_mode( $args['edit_mode'] );
 		}
 
 		do_action( 'elementor/template-library/before_get_source_data', $args, $source );
@@ -397,7 +540,7 @@ class Manager {
 		$source = $this->get_source( $args['source'] );
 
 		if ( ! $source ) {
-			return new \WP_Error( 'template_error', 'Template source not found.' );
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
 		}
 
 		return $source->delete_template( $args['template_id'] );
@@ -423,25 +566,10 @@ class Manager {
 			return $validate_args;
 		}
 
-		$post_id = intval( $args['template_id'] );
-		$post_status = get_post_status( $post_id );
-
-		if ( get_post_type( $post_id ) !== Source_Local::CPT ) {
-			return new \WP_Error( 'template_error', esc_html__( 'Invalid template type or template does not exist.', 'elementor' ) );
-		}
-
-		if ( 'private' === $post_status && ! current_user_can( 'read_private_posts', $post_id ) ) {
-			return new \WP_Error( 'template_error', esc_html__( 'You do not have permission to access this template.', 'elementor' ) );
-		}
-
-		if ( 'publish' !== $post_status && ! current_user_can( 'edit_post', $post_id ) ) {
-			return new \WP_Error( 'template_error', esc_html__( 'You do not have permission to export this template.', 'elementor' ) );
-		}
-
 		$source = $this->get_source( $args['source'] );
 
 		if ( ! $source ) {
-			return new \WP_Error( 'template_error', 'Template source not found' );
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
 		}
 
 		return $source->export_template( $args['template_id'] );
@@ -454,7 +582,7 @@ class Manager {
 	public function direct_import_template() {
 		/** @var Source_Local $source */
 		$source = $this->get_source( 'local' );
-		$file = Utils::get_super_global_value( $_FILES, 'file' );
+		$file = Utils::get_super_global_value( $_FILES, 'file' ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		return $source->import_template( $file['name'], $file['tmp_name'] );
 	}
 
@@ -487,10 +615,9 @@ class Manager {
 			return $upload_result;
 		}
 
-		/** @var Source_Local $source_local */
-		$source_local = $this->get_source( 'local' );
+		$source = $this->get_source( $data['source'] ?? 'local' );
 
-		$import_result = $source_local->import_template( $upload_result['name'], $upload_result['tmp_name'] );
+		$import_result = $source->import_template( $upload_result['name'], $upload_result['tmp_name'] );
 
 		// Remove the temporary directory generated for the stream-uploaded file.
 		Plugin::$instance->uploads_manager->remove_file_or_dir( dirname( $upload_result['tmp_name'] ) );
@@ -555,6 +682,88 @@ class Manager {
 		return $import_data['content'];
 	}
 
+	public function get_item_children( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		return $source->get_item_children( $args );
+	}
+
+	public function search_templates( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'search' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		return $source->search_templates( $args );
+	}
+
+	public function load_more_templates( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'offset' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		return $source->get_items( $args );
+	}
+
+	public function create_folder( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'title' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		return $source->save_folder( $args );
+	}
+
+	public function get_folders( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'offset' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', 'Folder source not found.' );
+		}
+
+		$args['templateType'] = 'folder';
+
+		return $source->get_items( $args );
+	}
+
 	/**
 	 * Register default template sources.
 	 *
@@ -568,6 +777,7 @@ class Manager {
 		$sources = [
 			'local',
 			'remote',
+			'cloud',
 		];
 
 		foreach ( $sources as $source_filename ) {
@@ -588,10 +798,10 @@ class Manager {
 	 *
 	 * @param string $ajax_request Ajax request.
 	 *
-	 * @param array $data
+	 * @param array  $data
 	 *
 	 * @return mixed
-	 * @throws \Exception
+	 * @throws \Exception If current user has no permission or the post is not found.
 	 */
 	private function handle_ajax_request( $ajax_request, array $data ) {
 		if ( ! User::is_current_user_can_edit_post_type( Source_Local::CPT ) ) {
@@ -611,10 +821,78 @@ class Manager {
 		$result = call_user_func( [ $this, $ajax_request ], $data );
 
 		if ( is_wp_error( $result ) ) {
-			throw new \Exception( $result->get_error_message() );
+			throw new \Exception( esc_html( $result->get_error_message() ) );
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @throws \Exception If template import fails, file validation errors occur, or processing encounters issues.
+	 */
+	public function save_template_screenshot( $data ): string {
+		$validate_args = $this->ensure_args( [ 'template_id', 'screenshot' ], $data );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$raw_binary = base64_decode( substr( $data['screenshot'], strlen( 'data:image/png;base64,' ) ) );
+
+		return $this->get_source( 'cloud' )->save_item_preview( $data['template_id'], $raw_binary );
+	}
+
+	/**
+	 * @throws \Exception If template processing fails or data validation errors occur.
+	 */
+	public function template_screenshot_failed( $data ): string {
+		$validate_args = $this->ensure_args( [ 'template_id' ], $data );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		return $this->get_source( 'cloud' )->mark_preview_as_failed( $data['template_id'], $data['error'] );
+	}
+
+	public function bulk_delete_templates( $data ) {
+		$validate_args = $this->ensure_args( [ 'template_ids', 'source' ], $data );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $data['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		if ( empty( $data['template_ids'] ) || ! is_array( $data['template_ids'] ) ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_IDS_MISSING );
+		}
+
+		return $source->bulk_delete_items( $data['template_ids'] );
+	}
+
+	public function bulk_undo_delete_items( $data ) {
+		$validate_args = $this->ensure_args( [ 'template_ids', 'source' ], $data );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $data['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		if ( empty( $data['template_ids'] ) || ! is_array( $data['template_ids'] ) ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_IDS_MISSING );
+		}
+
+		return $source->bulk_undo_delete_items( $data['template_ids'] );
 	}
 
 	/**
@@ -637,6 +915,21 @@ class Manager {
 			'import_template',
 			'mark_template_as_favorite',
 			'import_from_json',
+			'get_item_children',
+			'search_templates',
+			'rename_template',
+			'load_more_templates',
+			'create_folder',
+			'get_folders',
+			'save_template_screenshot',
+			'move_template',
+			'copy_template',
+			'bulk_move_templates',
+			'bulk_delete_templates',
+			'bulk_copy_templates',
+			'bulk_undo_delete_items',
+			'get_templates_quota',
+			'template_screenshot_failed',
 		];
 
 		foreach ( $library_ajax_requests as $ajax_request ) {
@@ -668,6 +961,10 @@ class Manager {
 			'export_template',
 			'direct_import_template',
 		];
+
+		if ( 'direct_import_template' === $action && ! User::is_current_user_can_upload_json() ) {
+			return;
+		}
 
 		if ( in_array( $action, $whitelist_methods, true ) ) {
 			$result = $this->$action( $_REQUEST ); // phpcs:ignore -- Nonce already verified.
@@ -733,5 +1030,118 @@ class Manager {
 		}
 
 		return true;
+	}
+
+	public function bulk_move_templates( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'from_source', 'from_template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$args['source'] = $args['source'][0];
+
+		return $this->bulk_move_template_items( $args );
+	}
+
+	private function bulk_move_template_items( array $args ) {
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		if ( $this->is_action_to_same_source( $args ) ) {
+			return $source->move_bulk_templates_to_folder( $args );
+		}
+
+		$from_source = $this->get_source( $args['from_source'] );
+
+		if ( ! $from_source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$bulk_args = $from_source->format_args_for_bulk_action( $args );
+
+		if ( $source->supports_quota() && ! $this->is_action_to_same_source( $args ) ) {
+			$is_quota_valid = $source->validate_quota( $bulk_args );
+
+			if ( is_wp_error( $is_quota_valid ) ) {
+				return $is_quota_valid;
+			}
+
+			if ( ! $is_quota_valid ) {
+				return new \WP_Error( 'quota_error', 'The moving failed because it will pass the maximum templates you can save.' );
+			}
+		}
+
+		$bulk_save = $source->save_bulk_items( $bulk_args );
+
+		if ( ! empty( $bulk_save ) ) {
+			$this->bulk_delete_templates( [
+				'template_ids' => $args['from_template_id'],
+				'source' => $args['from_source'],
+			] );
+		}
+
+		return $bulk_save;
+	}
+
+	public function bulk_copy_templates( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source', 'from_source', 'from_template_id' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$args['source'] = $args['source'][0];
+
+		return $this->bulk_copy_template_items( $args );
+	}
+
+	private function bulk_copy_template_items( array $args ) {
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$from_source = $this->get_source( $args['from_source'] );
+
+		if ( ! $from_source ) {
+			return new \WP_Error( 'template_error', self::ERROR_TEMPLATE_SOURCE_NOT_FOUND );
+		}
+
+		$bulk_args = $from_source->format_args_for_bulk_action( $args );
+
+		if ( $source->supports_quota() && ! $this->is_action_to_same_source( $args ) ) {
+			$is_quota_valid = $source->validate_quota( $bulk_args );
+
+			if ( is_wp_error( $is_quota_valid ) ) {
+				return $is_quota_valid;
+			}
+
+			if ( ! $is_quota_valid ) {
+				return new \WP_Error( 'quota_error', 'The copying failed because it will pass the maximum templates you can save.' );
+			}
+		}
+
+		return $source->save_bulk_items( $bulk_args );
+	}
+
+	public function get_templates_quota( array $args ) {
+		$validate_args = $this->ensure_args( [ 'source' ], $args );
+
+		if ( is_wp_error( $validate_args ) ) {
+			return $validate_args;
+		}
+
+		$source = $this->get_source( $args['source'] );
+
+		if ( ! $source ) {
+			return new \WP_Error( 'template_error', 'Source not found.' );
+		}
+
+		return $source->get_quota();
 	}
 }

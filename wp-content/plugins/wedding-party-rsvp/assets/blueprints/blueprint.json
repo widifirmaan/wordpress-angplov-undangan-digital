@@ -1,0 +1,37 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/wp-admin/admin.php?page=wedding-rsvp-main",
+	"preferredVersions": {
+		"php": "8.2",
+		"wp": "latest"
+	},
+	"steps": [
+		{
+			"step": "login",
+			"username": "admin",
+			"password": "password"
+		},
+		{
+			"step": "installPlugin",
+			"pluginZipFile": {
+				"resource": "wordpress.org/plugins",
+				"slug": "wedding-party-rsvp"
+			},
+			"options": {
+				"activate": true
+			}
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php\nrequire_once '/wordpress/wp-load.php';\n\n// Configure menu options\n$menu_options = array(\n\t'Grilled Salmon',\n\t'Chicken Marsala',\n\t'Beef Tenderloin',\n\t'Vegetarian Pasta',\n\t'Prime Rib'\n);\n\nupdate_option('wgrsvp_menu_options', $menu_options);\n\n// Configure general settings\n$settings = array(\n\t'welcome_title' => 'RSVP to Our Wedding',\n\t'primary_color' => '#333333',\n\t'font_size' => '16'\n);\n\nupdate_option('wgrsvp_general_settings', $settings);"
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php\nrequire_once '/wordpress/wp-load.php';\n\nglobal $wpdb;\n$table_name = $wpdb->prefix . 'wedding_rsvps';\n\n// Create sample guests with different party IDs\n$guests = array(\n\t// Party ID: SMITH-001\n\tarray(\n\t\t'party_id' => 'SMITH-001',\n\t\t'guest_name' => 'John Smith',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Grilled Salmon',\n\t\t'email' => 'john.smith@example.com',\n\t\t'phone' => '(555) 111-2222',\n\t\t'table_number' => '5'\n\t),\n\tarray(\n\t\t'party_id' => 'SMITH-001',\n\t\t'guest_name' => 'Jane Smith',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Chicken Marsala',\n\t\t'email' => 'jane.smith@example.com',\n\t\t'phone' => '(555) 111-2222',\n\t\t'table_number' => '5'\n\t),\n\t// Party ID: JONES-002\n\tarray(\n\t\t'party_id' => 'JONES-002',\n\t\t'guest_name' => 'Michael Jones',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Beef Tenderloin',\n\t\t'email' => 'michael.jones@example.com',\n\t\t'phone' => '(555) 222-3333',\n\t\t'table_number' => '3'\n\t),\n\tarray(\n\t\t'party_id' => 'JONES-002',\n\t\t'guest_name' => 'Sarah Jones',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Vegetarian Pasta',\n\t\t'email' => 'sarah.jones@example.com',\n\t\t'phone' => '(555) 222-3333',\n\t\t'table_number' => '3'\n\t),\n\t// Party ID: WILSON-003\n\tarray(\n\t\t'party_id' => 'WILSON-003',\n\t\t'guest_name' => 'David Wilson',\n\t\t'rsvp_status' => 'Pending',\n\t\t'menu_choice' => '',\n\t\t'email' => 'david.wilson@example.com',\n\t\t'phone' => '(555) 333-4444',\n\t\t'table_number' => ''\n\t),\n\t// Party ID: BROWN-004\n\tarray(\n\t\t'party_id' => 'BROWN-004',\n\t\t'guest_name' => 'Emily Brown',\n\t\t'rsvp_status' => 'Declined',\n\t\t'menu_choice' => '',\n\t\t'email' => 'emily.brown@example.com',\n\t\t'phone' => '(555) 444-5555',\n\t\t'table_number' => ''\n\t),\n\t// Party ID: DAVIS-005\n\tarray(\n\t\t'party_id' => 'DAVIS-005',\n\t\t'guest_name' => 'Robert Davis',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Prime Rib',\n\t\t'email' => 'robert.davis@example.com',\n\t\t'phone' => '(555) 555-6666',\n\t\t'table_number' => '7',\n\t\t'dietary_restrictions' => 'Gluten-free',\n\t\t'allergies' => 'None'\n\t),\n\tarray(\n\t\t'party_id' => 'DAVIS-005',\n\t\t'guest_name' => 'Lisa Davis',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Grilled Salmon',\n\t\t'email' => 'lisa.davis@example.com',\n\t\t'phone' => '(555) 555-6666',\n\t\t'table_number' => '7'\n\t),\n\t// Party ID: MILLER-006\n\tarray(\n\t\t'party_id' => 'MILLER-006',\n\t\t'guest_name' => 'James Miller',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Chicken Marsala',\n\t\t'email' => 'james.miller@example.com',\n\t\t'phone' => '(555) 666-7777',\n\t\t'table_number' => '2',\n\t\t'guest_message' => 'Looking forward to celebrating with you!'\n\t),\n\tarray(\n\t\t'party_id' => 'MILLER-006',\n\t\t'guest_name' => 'Patricia Miller',\n\t\t'rsvp_status' => 'Accepted',\n\t\t'menu_choice' => 'Beef Tenderloin',\n\t\t'email' => 'patricia.miller@example.com',\n\t\t'phone' => '(555) 666-7777',\n\t\t'table_number' => '2'\n\t),\n\t// Party ID: GARCIA-007\n\tarray(\n\t\t'party_id' => 'GARCIA-007',\n\t\t'guest_name' => 'Maria Garcia',\n\t\t'rsvp_status' => 'Pending',\n\t\t'menu_choice' => '',\n\t\t'email' => 'maria.garcia@example.com',\n\t\t'phone' => '(555) 777-8888',\n\t\t'table_number' => ''\n\t)\n);\n\nforeach ($guests as $guest) {\n\t$wpdb->insert(\n\t\t$table_name,\n\t\tarray(\n\t\t\t'party_id' => $guest['party_id'],\n\t\t\t'guest_name' => $guest['guest_name'],\n\t\t\t'rsvp_status' => $guest['rsvp_status'],\n\t\t\t'menu_choice' => $guest['menu_choice'],\n\t\t\t'email' => $guest['email'],\n\t\t\t'phone' => $guest['phone'],\n\t\t\t'table_number' => $guest['table_number'],\n\t\t\t'dietary_restrictions' => isset($guest['dietary_restrictions']) ? $guest['dietary_restrictions'] : '',\n\t\t\t'allergies' => isset($guest['allergies']) ? $guest['allergies'] : '',\n\t\t\t'guest_message' => isset($guest['guest_message']) ? $guest['guest_message'] : ''\n\t\t),\n\t\tarray('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')\n\t);\n}"
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php\nrequire_once '/wordpress/wp-load.php';\n\n// Create a demo page showcasing the RSVP form\n$demo_page = wp_insert_post(array(\n\t'post_title' => 'Wedding RSVP',\n\t'post_content' => '<h1>RSVP to Our Wedding</h1>\n<p>Please enter your Party ID below to access your RSVP form.</p>\n\n[wedding_rsvp_form]\n\n<p><em>Example Party IDs: SMITH-001, JONES-002, DAVIS-005</em></p>',\n\t'post_status' => 'publish',\n\t'post_type' => 'page'\n));\n\n// Set as homepage if no homepage is set\nif (!get_option('page_on_front')) {\n\tupdate_option('show_on_front', 'page');\n\tupdate_option('page_on_front', $demo_page);\n}"
+		}
+	]
+}

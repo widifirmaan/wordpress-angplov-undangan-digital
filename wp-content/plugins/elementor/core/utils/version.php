@@ -77,7 +77,7 @@ class Version {
 	 * @return bool
 	 */
 	public static function is_valid_version( $version ) {
-		return ! ! preg_match( '/^(\d+\.)?(\d+\.)?(\*|\d+)(-.+)?$/', $version );
+		return (bool) preg_match( '/^(\d+\.)?(\d+\.)?(\*|\d+)(-.+)?$/', $version );
 	}
 
 	/**
@@ -87,11 +87,11 @@ class Version {
 	 * @param bool $should_validate
 	 *
 	 * @return static
-	 * @throws \Exception
+	 * @throws \Exception If version comparison fails or invalid version format is provided.
 	 */
 	public static function create_from_string( $version, $should_validate = true ) {
 		if ( $should_validate && ! static::is_valid_version( $version ) ) {
-			throw new \Exception( "{$version} is an invalid version." );
+			throw new \Exception( sprintf( '%s is an invalid version.', esc_html( $version ) ) );
 		}
 
 		$parts = explode( '.', $version );
@@ -131,7 +131,7 @@ class Version {
 	 * @param string $part
 	 *
 	 * @return bool
-	 * @throws \Exception
+	 * @throws \Exception If version validation fails or parsing errors occur.
 	 */
 	public function compare( $operator, $version, $part = self::PART_STAGE ) {
 		if ( ! ( $version instanceof Version ) ) {

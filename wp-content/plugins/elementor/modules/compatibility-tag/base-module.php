@@ -62,8 +62,6 @@ abstract class Base_Module extends BaseModule {
 	 * Append a compatibility message to the update plugin warning.
 	 *
 	 * @param array $args
-	 *
-	 * @throws \Exception
 	 */
 	protected function on_plugin_update_message( array $args ) {
 		$new_version = Version::create_from_string( $args['new_version'] );
@@ -73,7 +71,7 @@ abstract class Base_Module extends BaseModule {
 		}
 
 		$plugins = $this->get_plugins_to_check();
-		$plugins_compatibility = $this->get_compatibility_tag_service()->check( $new_version, $plugins->keys() );
+		$plugins_compatibility = $this->get_compatibility_tag_service()->check( $new_version, $plugins->keys()->all() );
 
 		$plugins = $plugins->filter( function ( $data, $plugin_name ) use ( $plugins_compatibility ) {
 			return Compatibility_Tag::COMPATIBLE !== $plugins_compatibility[ $plugin_name ];
@@ -121,8 +119,6 @@ abstract class Base_Module extends BaseModule {
 
 	/**
 	 * Base_Module constructor.
-	 *
-	 * @throws \Exception
 	 */
 	public function __construct() {
 		add_filter( 'extra_plugin_headers', function ( array $headers ) {
@@ -147,7 +143,8 @@ abstract class Base_Module extends BaseModule {
 						'plugin_version' => Version::create_from_string( $this->get_plugin_version() ),
 						'plugins_to_check' => $this->get_plugins_to_check()
 							->only( get_option( 'active_plugins' ) )
-							->keys(),
+							->keys()
+							->all(),
 					],
 				]
 			);

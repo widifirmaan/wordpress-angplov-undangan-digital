@@ -2,6 +2,9 @@
 
 namespace YahnisElsts\AdminMenuEditor\Options;
 
+use YahnisElsts\AdminMenuEditor\Collections\ArrayWrapper;
+use YahnisElsts\AdminMenuEditor\Collections\IterableOps;
+
 /**
  * A simplified PHP version of the Option class from Scala.
  *
@@ -10,7 +13,7 @@ namespace YahnisElsts\AdminMenuEditor\Options;
  *
  * @template T
  */
-abstract class Option implements \IteratorAggregate {
+abstract class Option implements \IteratorAggregate, IterableOps {
 	/**
 	 * @return boolean
 	 */
@@ -60,10 +63,10 @@ abstract class Option implements \IteratorAggregate {
 
 	/**
 	 * @template R
-	 * @param callable(T):Option<R> $callable
+	 * @param callable(T):Option<R> $callback
 	 * @return Option<R>
 	 */
-	abstract public function flatMap($callable);
+	abstract public function flatMap($callback): Option;
 
 	/**
 	 * Apply the given function to the option's value, if it's not empty.
@@ -84,6 +87,16 @@ abstract class Option implements \IteratorAggregate {
 	 */
 	abstract public function contains($value);
 
+	/**
+	 * Get the array stored in the option as an ArrayWrapper.
+	 *
+	 * If the option is empty or does not contain an array, the provided default array
+	 * will be used instead.
+	 *
+	 * @param array $defaultArray
+	 * @return ArrayWrapper
+	 */
+	abstract public function ensureArray(array $defaultArray = []): ArrayWrapper;
 
 	/**
 	 * @template A
@@ -163,8 +176,8 @@ final class Some extends Option {
 		return new self($callable($this->value));
 	}
 
-	public function flatMap($callable) {
-		return $callable($this->value);
+	public function flatMap($callback): Option {
+		return $callback($this->value);
 	}
 
 	public function each($callable) {
@@ -174,6 +187,20 @@ final class Some extends Option {
 
 	public function contains($value) {
 		return ($this->value === $value);
+	}
+
+	public function ensureArray(array $defaultArray = []): ArrayWrapper {
+		if ( is_array($this->value) ) {
+			return new ArrayWrapper($this->value);
+		} else if ( $this->value instanceof ArrayWrapper ) {
+			return $this->value;
+		} else {
+			return new ArrayWrapper($defaultArray);
+		}
+	}
+
+	public function toArray(): array {
+		return [$this->value];
 	}
 
 	#[\ReturnTypeWillChange]
@@ -192,6 +219,9 @@ final class None extends Option {
 		//Prevent others from instantiating this class.
 	}
 
+	/**
+	 * @return self
+	 */
 	public static function getInstance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -223,7 +253,7 @@ final class None extends Option {
 		return $this;
 	}
 
-	public function flatMap($callable) {
+	public function flatMap($callback): self {
 		return $this;
 	}
 
@@ -234,6 +264,14 @@ final class None extends Option {
 
 	public function contains($value) {
 		return false;
+	}
+
+	public function ensureArray(array $defaultArray = []): ArrayWrapper {
+		return new ArrayWrapper($defaultArray);
+	}
+
+	public function toArray(): array {
+		return [];
 	}
 
 	#[\ReturnTypeWillChange]
@@ -311,8 +349,8 @@ class LazyOption extends Option {
 		return $this->resolve()->map($callable);
 	}
 
-	public function flatMap($callable) {
-		return $this->resolve()->flatMap($callable);
+	public function flatMap($callback): Option {
+		return $this->resolve()->flatMap($callback);
 	}
 
 	public function each($callable) {
@@ -322,6 +360,14 @@ class LazyOption extends Option {
 
 	public function contains($value) {
 		return $this->resolve()->contains($value);
+	}
+
+	public function ensureArray(array $defaultArray = []): ArrayWrapper {
+		return $this->resolve()->ensureArray($defaultArray);
+	}
+
+	public function toArray(): array {
+		return $this->resolve()->toArray();
 	}
 
 	#[\ReturnTypeWillChange]

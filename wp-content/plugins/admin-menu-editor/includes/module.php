@@ -1,5 +1,7 @@
 <?php
 
+use YahnisElsts\WpDependencyWrapper\v1\ScriptDependency;
+
 abstract class ameModule {
 	protected $tabSlug = '';
 	protected $tabTitle = '';
@@ -9,6 +11,13 @@ abstract class ameModule {
 	protected $moduleDir = '';
 
 	protected $settingsFormAction = '';
+
+	/**
+	 * CSS stylesheets to automatically enqueue in the module tab.
+	 *
+	 * @var array<string,string> [$handle => $relativeUrl]
+	 */
+	protected $localTabStyles = [];
 
 	/**
 	 * @var WPMenuEditor
@@ -30,6 +39,7 @@ abstract class ameModule {
 		}
 
 		add_action('admin_menu_editor-register_scripts', array($this, 'registerScripts'));
+		add_filter('admin_menu_editor-base_scripts', array($this, 'addBaseScripts'));
 
 		//Register the module tab.
 		if ( ($this->tabSlug !== '') && is_string($this->tabSlug) ) {
@@ -65,7 +75,7 @@ abstract class ameModule {
 	}
 
 	public function displaySettingsPage() {
-		$this->menuEditor->display_settings_page_header();
+		$this->menuEditor->display_settings_page_header($this->getWrapClasses());
 
 		if ( !$this->outputMainTemplate() ) {
 			printf(
@@ -78,7 +88,7 @@ abstract class ameModule {
 		$this->menuEditor->display_settings_page_footer();
 	}
 
-	protected function getTabUrl($queryParameters = array()) {
+	public function getTabUrl($queryParameters = array()) {
 		$queryParameters = array_merge(
 			array('sub_section' => $this->tabSlug),
 			$queryParameters
@@ -111,6 +121,15 @@ abstract class ameModule {
 		return array();
 	}
 
+	/**
+	 * Get extra CSS classes to add to the .wrap element in the module tab.
+	 *
+	 * @return string[]
+	 */
+	protected function getWrapClasses() {
+		return [];
+	}
+
 	public function registerScripts() {
 		//Override this method to register scripts.
 	}
@@ -120,7 +139,22 @@ abstract class ameModule {
 	}
 
 	public function enqueueTabStyles() {
-		//Override this method to add stylesheets to the $this->tabSlug tab.
+		//Enqueue predefined local styles.
+		foreach ($this->localTabStyles as $handle => $relativePath) {
+			$this->enqueueLocalStyle($handle, $relativePath);
+		}
+
+		//Override this method to add more stylesheets to the $this->tabSlug tab.
+	}
+
+	/**
+	 * Add script dependencies that can be used in other parts of the plugin, not just this module.
+	 *
+	 * @param ScriptDependency[] $deps
+	 * @return ScriptDependency[]
+	 */
+	public function addBaseScripts(array $deps): array {
+		return $deps;
 	}
 
 	/**
@@ -134,6 +168,10 @@ abstract class ameModule {
 
 	public function handleSettingsForm($post = array()) {
 		//Override this method to process a form submitted from the module's tab.
+	}
+
+	public function getSettingsFormAction(): string {
+		return $this->settingsFormAction;
 	}
 
 	protected function getScopedOption($name, $defaultValue = null) {
@@ -158,5 +196,201 @@ abstract class ameModule {
 
 	public function getTabTitle() {
 		return $this->tabTitle;
+	}
+
+	protected function enqueueLocalScript($handle, $relativePath, $dependencies = [], $inFooter = false) {
+		list($scriptUrl, $version) = $this->findModuleBrowserDependency($relativePath);
+		wp_enqueue_script($handle, $scriptUrl, $dependencies, $version, $inFooter);
+	}
+
+	protected function enqueueLocalStyle($handle, $relativePath, $dependencies = [], $media = 'all') {
+		list($styleUrl, $version) = $this->findModuleBrowserDependency($relativePath);
+		wp_enqueue_style($handle, $styleUrl, $dependencies, $version, $media);
+	}
+
+	protected function registerLocalStyle($handle, $relativePath, $dependencies = [], $media = 'all') {
+		list($styleUrl, $version) = $this->findModuleBrowserDependency($relativePath);
+		wp_register_style($handle, $styleUrl, $dependencies, $version, $media);
+	}
+
+	protected function registerLocalScript($handle, $relativePath, $dependencies = [], $inFooter = false): ScriptDependency {
+		$dependency = $this->createScriptDependency($relativePath, $handle);
+		if ( $inFooter ) {
+			$dependency->setInFooter();
+		}
+		if ( !empty($dependencies) ) {
+			$dependency->addDependencies(...$dependencies);
+		}
+		return $dependency->register();
+	}
+
+	/**
+	 * @param string $relativePath
+	 * @param string|null $handle
+	 * @return ScriptDependency
+	 */
+	protected function createScriptDependency($relativePath, $handle = null) {
+		$relativePath = ltrim($relativePath, '/');
+		$fullPath = $this->moduleDir . '/' . $relativePath;
+
+		return ScriptDependency::create(
+			plugins_url($relativePath, $this->moduleDir . '/dummy.php'),
+			$handle,
+			$fullPath
+		);
+	}
+
+	/**
+	 * @param string $relativePath
+	 * @return string[] Dependency URL and version, in that order.
+	 */
+	private function findModuleBrowserDependency($relativePath) {
+		$relativePath = ltrim($relativePath, '/');
+		$url = plugins_url($relativePath, $this->moduleDir . '/dummy.php');
+		$version = $this->getModuleFileVersion($relativePath);
+		return array($url, $version);
+	}
+
+	/**
+	 * @param string $relativePath
+	 * @return string|false
+	 */
+	private function getModuleFileVersion($relativePath) {
+		$fullPath = $this->moduleDir . '/' . $relativePath;
+		if ( is_file($fullPath) ) {
+			$modTime = filemtime($fullPath);
+			if ( $modTime !== false ) {
+				return (string)$modTime;
+			}
+		}
+		return false;
+	}
+}
+
+class ameBaseScriptDependencies implements ArrayAccess, IteratorAggregate {
+	protected $deps = [];
+
+	public function __construct(array $deps) {
+		$this->deps = $deps;
+	}
+
+	public function list(): ameBaseDependencyCollection {
+		return new ameBaseDependencyCollection($this);
+	}
+
+	public function __invoke(): ameBaseDependencyCollection {
+		return $this->list();
+	}
+
+	//region Array compatibility
+	public function offsetExists($offset): bool {
+		return isset($this->deps[$offset]);
+	}
+
+	/** @noinspection PhpLanguageLevelInspection */
+	#[\ReturnTypeWillChange]
+	public function offsetGet($offset) {
+		return $this->deps[$offset] ?? null;
+	}
+
+	public function offsetSet($offset, $value): void {
+		$this->deps[$offset] = $value;
+	}
+
+	public function offsetUnset($offset): void {
+		unset($this->deps[$offset]);
+	}
+
+	public function getIterator(): Traversable {
+		return new ArrayIterator($this->deps);
+	}
+	//endregion
+}
+
+class ameBaseDependencyCollection implements IteratorAggregate {
+	protected $deps;
+	protected $selectedDeps = [];
+
+	public function __construct(ameBaseScriptDependencies $deps) {
+		$this->deps = $deps;
+	}
+
+	protected function add($handle) {
+		$dep = $this->deps[$handle] ?? null;
+		if ( $dep !== null ) {
+			$this->selectedDeps[$handle] = $dep;
+		} else {
+			throw new InvalidArgumentException("Dependency with handle \"$handle\" not found.");
+		}
+	}
+
+	public function getIterator(): Traversable {
+		//PHP < 8.1 compatibility: We use the iterator with a splat operator later, which
+		//doesn't support arrays/Traversable with string keys. So we reindex the array here.
+		return new ArrayIterator(array_values($this->selectedDeps));
+	}
+
+	public function ko(): self {
+		$this->add('ame-knockout');
+		return $this;
+	}
+
+	public function koExtensions(): self {
+		if ( !empty($this->deps['ame-ko-extensions']) ) {
+			$this->add('ame-ko-extensions');
+			//Note: We don't need to explicitly include "ame-knockout" or "ame-free-ko-extensions" since
+			//"ame-ko-extensions" already has those as a dependencies.
+		} else {
+			//Fallback for the free version.
+			$this->add('ame-free-ko-extensions');
+		}
+		return $this;
+	}
+
+	public function koSortable(): self {
+		$this->add('ame-knockout-sortable');
+		return $this;
+	}
+
+	public function actorManager(): self {
+		$this->add('ame-actor-manager');
+		return $this;
+	}
+
+	public function selector(): self {
+		$this->add('ame-actor-selector');
+		$this->add('ame-actor-manager');
+		return $this;
+	}
+
+	public function cookies(): self {
+		$this->add('ame-jquery-cookie');
+		return $this;
+	}
+
+	public function qtip(): self {
+		$this->add('jquery-qtip');
+		return $this;
+	}
+
+	public function lodash(): self {
+		$this->add('ame-lodash');
+		return $this;
+	}
+
+	public function proCommonLib(): self {
+		$this->add('ame-pro-common-lib');
+		return $this;
+	}
+
+	/**
+	 * Add Knockout and it's extensions, actor selector/manager, and Lodash.
+	 *
+	 * This is a common combination used in multiple modules.
+	 *
+	 * @return self
+	 */
+	public function koPackage(): self {
+		return $this->koExtensions()->selector()->lodash();
 	}
 }

@@ -1,3 +1,22 @@
+.ame-check-or-radio-collection {
+  line-height: 1.64286;
+}
+.ws-ame-postbox .ame-check-or-radio-collection.ws-ame-postbox-content {
+  padding-top: 8px;
+}
+
+.ame-general-control-children {
+  margin-left: calc(1.25rem + 0.29em);
+  display: flex;
+  flex-direction: column;
+}
+
+@media screen and (max-width: 782px) {
+  .ame-general-control-children {
+    margin-left: calc(1.8125rem + 0.29em);
+    margin-top: 0.25rem;
+  }
+}
 .ame-image-selector-v2 .ame-image-preview {
   border: 1px dashed #b4b9be;
   text-align: center;
@@ -168,7 +187,7 @@
   background-color: #dcdcde;
   color: #135e96;
   border-color: #0a4b78;
-  box-shadow: inset 0 2px 5px -3px #0a4b78;
+  box-shadow: inset 0 2px 5px -3px var(--ame-rb-box-shadow-color, #0a4b78);
   z-index: 1;
 }
 .ame-radio-button-bar-control > .ame-radio-bar-item:not(:first-child) > .button {

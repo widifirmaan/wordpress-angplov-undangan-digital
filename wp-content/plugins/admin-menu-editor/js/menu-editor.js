@@ -1668,8 +1668,7 @@ var knownMenuFields = {
 
 	'css_class' : $.extend({}, baseField, {
 		caption: 'CSS classes',
-		advanced : true,
-		onlyForTopMenus: true
+		advanced : true
 	}),
 
 	'hookname' : $.extend({}, baseField, {
@@ -1958,15 +1957,15 @@ function walkMenuTree(containerNode, callback) {
  */
 function updateActorAccessUi(containerNode) {
 	//Update the permissions checkbox & UI
-	var menuItem = containerNode.data('menu_item');
+	const menuItem = containerNode.data('menu_item');
 	if (actorSelectorWidget.selectedActor !== null) {
-		var hasAccess = actorCanAccessMenu(menuItem, actorSelectorWidget.selectedActor);
-		var hasCustomPermissions = actorHasCustomPermissions(menuItem, actorSelectorWidget.selectedActor);
+		let hasAccess = actorCanAccessMenu(menuItem, actorSelectorWidget.selectedActor);
+		const hasCustomPermissions = actorHasCustomPermissions(menuItem, actorSelectorWidget.selectedActor);
 
-		var isOverrideActive = !hasAccess && getFieldValue(menuItem, 'restrict_access_to_items', false);
+		let isOverrideActive = !hasAccess && getFieldValue(menuItem, 'restrict_access_to_items', false);
 
 		//Check if the parent menu has the "hide all submenus if this is hidden" override in effect.
-		var currentChild = containerNode, parentNode, parentItem;
+		let currentChild = containerNode, parentNode, parentItem;
 		do {
 			parentNode = getParentMenuNode(currentChild);
 			parentItem = parentNode.data('menu_item');
@@ -1982,23 +1981,38 @@ function updateActorAccessUi(containerNode) {
 			currentChild = parentNode;
 		} while (parentNode.length > 0);
 
-		var checkbox = containerNode.find('.ws_actor_access_checkbox');
-		checkbox.prop('checked', hasAccess);
+		//For better UX, try to predict the visible/hidden state even when we can't determine
+		//it reliably for items that use meta capabilities.
+		let predictedHasAccess = !!hasAccess;
+		let isUncertainMetaCap = false;
+
+		//Check meta capabilities.
+		if (hasAccess === null) {
+			const requiredCap = getFieldValue(menuItem, 'access_level', '< Error: access_level is missing! [2] >');
+			const result = AmeCapabilityManager.maybeHasMetaCap(actorSelectorWidget.selectedActor, requiredCap);
+			if (result !== null) {
+				predictedHasAccess = !!result.prediction;
+				isUncertainMetaCap = true;
+			}
+		}
+
+		const checkbox = containerNode.find('.ws_actor_access_checkbox');
+		checkbox.prop('checked', predictedHasAccess);
 
 		//Display the checkbox in an indeterminate state if the actual menu permissions are unknown
 		//because it uses meta capabilities.
-		var isIndeterminate = (hasAccess === null);
+		let isIndeterminate = (hasAccess === null);
 		//Also show it as indeterminate if some items of this menu are hidden and some are visible,
 		//or if their permissions don't match this menu's permissions.
-		var submenuItems = getSubmenuItemNodes(containerNode);
+		const submenuItems = getSubmenuItemNodes(containerNode);
 		if ((submenuItems.length > 0) && !isOverrideActive)  {
-			var differentPermissions = false;
+			let differentPermissions = false;
 			submenuItems.each(function() {
-				var item = $(this).data('menu_item');
+				const item = $(this).data('menu_item');
 				if ( !item ) { //Skip placeholder items created by drag & drop operations.
 					return true;
 				}
-				var hasSubmenuAccess = actorCanAccessMenu(item, actorSelectorWidget.selectedActor);
+				const hasSubmenuAccess = actorCanAccessMenu(item, actorSelectorWidget.selectedActor);
 				if (hasSubmenuAccess !== hasAccess) {
 					differentPermissions = true;
 					return false;
@@ -2012,12 +2026,12 @@ function updateActorAccessUi(containerNode) {
 		}
 		checkbox.prop('indeterminate', isIndeterminate);
 
-		if (isIndeterminate && (hasAccess === null)) {
+		if (isUncertainMetaCap) {
 			setMenuFlag(
 				containerNode,
 				'uncertain_meta_cap',
 				true,
-				"This item might be visible.\n"
+				"This item might " + (predictedHasAccess ? 'not ' : '') + "be visible.\n"
 				+ "The plugin cannot reliably detect if \"" + actorSelectorWidget.selectedDisplayName
 				+ "\" has the \"" + getFieldValue(menuItem, 'access_level', '[No capability]')
 				+ "\" capability. If you need to hide the item, try checking and then unchecking it."
@@ -2026,7 +2040,7 @@ function updateActorAccessUi(containerNode) {
 			setMenuFlag(containerNode, 'uncertain_meta_cap', false);
 		}
 
-		containerNode.toggleClass('ws_is_hidden_for_actor', !hasAccess);
+		containerNode.toggleClass('ws_is_hidden_for_actor', !predictedHasAccess);
 		containerNode.toggleClass('ws_has_custom_permissions_for_actor', hasCustomPermissions);
 		setMenuFlag(containerNode, 'custom_actor_permissions', hasCustomPermissions);
 		setMenuFlag(containerNode, 'hidden_from_others', false);
@@ -2035,11 +2049,11 @@ function updateActorAccessUi(containerNode) {
 		setMenuFlag(containerNode, 'custom_actor_permissions', false);
 		setMenuFlag(containerNode, 'uncertain_meta_cap', false);
 
-		var currentUserActor = 'user:' + wsEditorData.currentUserLogin;
-		var otherActors = _(wsEditorData.actors).keys().without(currentUserActor, 'special:super_admin').value(),
-			hiddenFromCurrentUser = ! actorCanAccessMenu(menuItem, currentUserActor),
+		const currentUserActor = 'user:' + wsEditorData.currentUserLogin;
+		const otherActors = _(wsEditorData.actors).keys().without(currentUserActor, 'special:super_admin').value(),
+			hiddenFromCurrentUser = !actorCanAccessMenu(menuItem, currentUserActor),
 			hasAccessToThisItem = _.curry(actorCanAccessMenu, 2)(menuItem),
-			hiddenFromOthers = _.every(otherActors, function(actorId) {
+			hiddenFromOthers = _.every(otherActors, function (actorId) {
 				return (hasAccessToThisItem(actorId) === false);
 			}),
 			visibleForSuperAdmin = AmeActors.isMultisite && actorCanAccessMenu(menuItem, 'special:super_admin');
@@ -2491,6 +2505,7 @@ function readMenuTreeState(){
 	var result = {
 		tree: tree,
 		granted_capabilities: AmeCapabilityManager.getGrantedCapabilities(),
+		suspected_meta_caps: AmeCapabilityManager.getSuspectedMetaCaps(),
 		component_visibility: $.extend(true, {}, generalComponentVisibility)
 	};
 
@@ -2658,7 +2673,7 @@ function readAllFields(container){
  Flag manipulation
  ***************************************************************************/
 
-var item_flags = {
+const item_flags = {
 	'custom': 'This is a custom menu item',
 	'unused': 'This item was added since the last time you saved menu settings.',
 	'hidden': 'Cosmetically hidden',
@@ -2671,14 +2686,14 @@ function setMenuFlag(item, flag, state, title) {
 	title = title || item_flags[flag];
 	item = $(item);
 
-	var item_class = 'ws_' + flag;
-	var img_class = 'ws_' + flag + '_flag';
+	const item_class = 'ws_' + flag;
+	const img_class = 'ws_' + flag + '_flag';
 
 	item.toggleClass(item_class, state);
 	if (state) {
 		//Add the flag image.
-		var flag_container = item.find('.ws_flag_container');
-		var image = flag_container.find('.' + img_class);
+		const flag_container = item.find('.ws_flag_container');
+		let image = flag_container.find('.' + img_class);
 		if (image.length === 0) {
 			image = $('<div></div>').addClass('ws_flag').addClass(img_class);
 			flag_container.append(image);
@@ -2705,7 +2720,7 @@ function menuHasFlag(item, flag){
  * @returns {boolean}
  */
 function itemHasHiddenFlag(menuItem, actor) {
-	var isHidden = false,
+	let isHidden = false,
 		userActors,
 		userPrefix = 'user:',
 		userLogin;
@@ -2723,7 +2738,7 @@ function itemHasHiddenFlag(menuItem, actor) {
 			//Otherwise the item is hidden only if it is hidden from all of the user's roles.
 			userLogin = actorSelectorWidget.selectedActor.substr(userPrefix.length);
 			userActors = AmeCapabilityManager.getGroupActorsFor(userLogin);
-			for (var i = 0; i < userActors.length; i++) {
+			for (let i = 0; i < userActors.length; i++) {
 				if (menuItem.hidden_from_actor.hasOwnProperty(userActors[i]) && menuItem.hidden_from_actor[userActors[i]]) {
 					isHidden = true;
 				} else {
@@ -2807,8 +2822,8 @@ function actorCanAccessMenu(menuItem, actor) {
 
 	//By default, any actor that has the required cap has access to the menu.
 	//Users can override this on a per-menu basis.
-	var requiredCap = getFieldValue(menuItem, 'access_level', '< Error: access_level is missing! >');
-	var actorHasAccess;
+	const requiredCap = getFieldValue(menuItem, 'access_level', '< Error: access_level is missing! >');
+	let actorHasAccess;
 	if (menuItem.grant_access.hasOwnProperty(actor)) {
 		actorHasAccess = menuItem.grant_access[actor];
 	} else {
@@ -2914,6 +2929,10 @@ function ameOnDomReady() {
 
 		//The Pro version supports submenu icons, but they can be disabled by the user.
 		knownMenuFields.icon_url.onlyForTopMenus = (wsEditorData.submenuIconsEnabled === 'never');
+
+		//The Pro version has more submenu fields, so let's enable the separator below "CSS classes".
+		//In the free version, the separator is hidden because there would only be a single field below it.
+		knownMenuFields.page_properties_heading.onlyForTopMenus = false;
 
 		$('.ws_hide_if_pro').hide();
 	}
@@ -4189,7 +4208,7 @@ function ameOnDomReady() {
 					victims = _.difference(validActors, alwaysAllowedActors),
 					shouldHide;
 
-				//First, lets check who has access. Maybe this item is already hidden from the victims.
+				//First, let's check who has access. Maybe this item is already hidden from the victims.
 				shouldHide = _.some(victims, _.curry(actorCanAccessMenu, 2)(menuItem));
 
 				let keepEnabled = objectFillKeys(alwaysAllowedActors, true),
@@ -4474,6 +4493,11 @@ function ameOnDomReady() {
 			});
 			item.defaults = $.extend(true, {}, itemTemplates.getDefaults(''));
 
+			//Top-level menus automatically get the "menu-top" class.
+			if (column.level <= 1) {
+				item['css_class'] = 'menu-top';
+			}
+
 			//Make it accessible only to the current actor if one is selected.
 			if (actorSelectorWidget.selectedActor !== null) {
 				denyAccessForAllExcept(item, actorSelectorWidget.selectedActor);
@@ -4639,7 +4663,7 @@ function ameOnDomReady() {
 
 	//Only enable the copy button when the user selects a valid source and destination.
 	copyConfirmationButton.prop('disabled', true);
-	sourceActorList.add(destinationActorList).on('click', function() {
+	sourceActorList.add(destinationActorList).on('change', function() {
 		var sourceActor = sourceActorList.val();
 		var destinationActor = destinationActorList.val();
 
@@ -5098,12 +5122,11 @@ function ameOnDomReady() {
 	});
 
 	/******************************************************************
-	                 Component visibility settings
+                 Component visibility settings
 	 ******************************************************************/
-
-	var $generalVisBox = $('#ws_ame_general_vis_box'),
-		$showAdminMenu = $('#ws_ame_show_admin_menu'),
-		$showWpToolbar = $('#ws_ame_show_toolbar');
+	const $generalVisBox = $('#ws_ame_general_vis_box');
+	const componentCheckboxes = {},
+		parsedComponentsDataKey = 'ameParsedComponents';
 
 	AmeEditorApi.actorCanSeeComponent = function(component, actorId) {
 		if (actorId === null) {
@@ -5151,40 +5174,73 @@ function ameOnDomReady() {
 		return true;
 	};
 
-	AmeEditorApi.refreshComponentVisibility = function() {
+	function refreshComponentCheckbox($checkbox) {
+		const components = $checkbox.data(parsedComponentsDataKey) || [];
+		if (components.length < 1) {
+			return;
+		}
+
+		const actorId = actorSelectorWidget.selectedActor;
+		let totalVisible = 0;
+		for (let i = 0; i < components.length; i++) {
+			if (AmeEditorApi.actorCanSeeComponent(components[i], actorId)) {
+				totalVisible++;
+			}
+		}
+
+		$checkbox.prop('checked', totalVisible === components.length);
+		$checkbox.prop('indeterminate', (totalVisible > 0) && (totalVisible < components.length));
+	}
+
+	AmeEditorApi.refreshComponentVisibility = function(updatedComponents = null) {
 		if ($generalVisBox.length < 1) {
 			return;
 		}
 
-		var actorId = actorSelectorWidget.selectedActor;
-		$showAdminMenu.prop('checked', AmeEditorApi.actorCanSeeComponent('adminMenu', actorId));
-		$showWpToolbar.prop('checked', AmeEditorApi.actorCanSeeComponent('toolbar', actorId));
+		if (updatedComponents === null) {
+			updatedComponents = Object.keys(componentCheckboxes);
+		}
+
+		_.forEach(updatedComponents, function (componentId) {
+			const checkboxes = componentCheckboxes[componentId] || [];
+			_.forEach(checkboxes, $checkbox => refreshComponentCheckbox($checkbox));
+		});
 	};
 
 	AmeEditorApi.setComponentVisibility = function(section, actorId, enabled) {
 		if (actorId === null) {
 			_.forEach(actorSelectorWidget.getVisibleActors(), function(actor) {
-				_.set(generalComponentVisibility, [section, actor.id], enabled);
+				_.set(generalComponentVisibility, [section, actor.getId()], enabled);
 			});
 		} else {
 			_.set(generalComponentVisibility, [section, actorId], enabled);
 		}
+
+		AmeEditorApi.refreshComponentVisibility([section]);
 	};
 
 	if ($generalVisBox.length > 0) {
-		$showAdminMenu.on('click', function() {
-			AmeEditorApi.setComponentVisibility(
-				'adminMenu',
-				actorSelectorWidget.selectedActor,
-				$(this).is(':checked')
-			);
-		});
-		$showWpToolbar.on('click', function () {
-			AmeEditorApi.setComponentVisibility(
-				'toolbar',
-				actorSelectorWidget.selectedActor,
-				$(this).is(':checked')
-			);
+		$generalVisBox.find('input[type="checkbox"][data-vis-components]').each(function() {
+			const $checkbox = $(this);
+			const components = $checkbox.data('vis-components');
+			if (!Array.isArray(components)) {
+				return;
+			}
+
+			$checkbox.data(parsedComponentsDataKey, components);
+			components.forEach(function(componentId) {
+				if (!componentCheckboxes.hasOwnProperty(componentId)) {
+					componentCheckboxes[componentId] = [];
+				}
+				componentCheckboxes[componentId].push($checkbox);
+			});
+
+			$checkbox.on('change', function() {
+				const isChecked = $(this).is(':checked');
+				components.forEach(function(componentId) {
+					AmeEditorApi.setComponentVisibility(componentId, actorSelectorWidget.selectedActor, isChecked);
+				});
+			});
 		});
 
 		$generalVisBox.find('.handlediv').on('click', function() {
@@ -5817,48 +5873,3 @@ var domCheckIntervalId = window.setInterval(function () {
 }, 1000);
 
 })(jQuery, wsAmeLodash);
-
-//==============================================
-//				Screen options
-//==============================================
-
-jQuery(function($){
-	'use strict';
-
-	var screenOptions = $('#ws-ame-screen-meta-contents');
-	var hideSettingsCheckbox = screenOptions.find('#ws-hide-advanced-settings');
-	hideSettingsCheckbox.prop('checked', wsEditorData.hideAdvancedSettings);
-
-	//Update editor state when settings change
-	$('#ws-hide-advanced-settings').on('click', function(){
-		wsEditorData.hideAdvancedSettings = hideSettingsCheckbox.prop('checked');
-
-		//Show/hide advanced settings dynamically as the user changes the setting.
-		if ($(this).is(hideSettingsCheckbox)) {
-			var menuEditorNode = $('#ws_menu_editor');
-			if ( wsEditorData.hideAdvancedSettings ){
-				menuEditorNode.find('div.ws_advanced').hide();
-				menuEditorNode.find('a.ws_toggle_advanced_fields').text(wsEditorData.captionShowAdvanced).show();
-			} else {
-				menuEditorNode.find('div.ws_advanced').show();
-				menuEditorNode.find('a.ws_toggle_advanced_fields').text(wsEditorData.captionHideAdvanced).hide();
-			}
-		}
-
-		$.post(
-			wsEditorData.adminAjaxUrl,
-			{
-				'action' : 'ws_ame_save_screen_options',
-				'hide_advanced_settings' : wsEditorData.hideAdvancedSettings ? 1 : 0,
-				'show_extra_icons' : wsEditorData.showExtraIcons ? 1 : 0,
-				'_ajax_nonce' : wsEditorData.hideAdvancedSettingsNonce
-			}
-		);
-	});
-
-	//Move our options into the screen meta panel
-	var advSettings = $('#adv-settings');
-	if (advSettings.length > 0) {
-		advSettings.empty().append(screenOptions.show());
-	}
-});

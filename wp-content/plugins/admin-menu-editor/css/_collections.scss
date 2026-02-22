@@ -1,0 +1,37 @@
+@use "ui-constants";
+
+//region Checkbox & radio button collections
+.ame-check-or-radio-collection {
+	//Taller lines for better separation of items.
+	line-height: ui-constants.$checkboxListItemLineHeight;
+
+	//Due to the increased line height, the default top padding is too large (visually) when
+	//a postbox has a checkbox collection as its content.
+	.ws-ame-postbox &.ws-ame-postbox-content {
+		padding-top: 8px;
+	}
+}
+//endregion
+
+//region Control children
+
+//Controls that don't want to do any special styling for their children can use this class.
+.ame-general-control-children {
+	margin-left: ui-constants.$controlChildLeftMargin;
+
+	//Basic vertical layout.
+	display: flex;
+	flex-direction: column;
+}
+
+@media screen and (max-width: 782px) {
+	.ame-general-control-children {
+		margin-left: ui-constants.$smControlChildLeftMargin;
+
+		//Checkboxes have negative vertical margins that can cause their vertical positions
+		//to overlap with the previous line of text on small screens.
+		margin-top: 0.25rem;
+	}
+}
+
+//endregion

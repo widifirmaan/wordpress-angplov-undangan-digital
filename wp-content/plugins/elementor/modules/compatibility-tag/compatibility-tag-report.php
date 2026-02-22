@@ -69,7 +69,6 @@ class Compatibility_Tag_Report extends Base {
 	 * Report data.
 	 *
 	 * @return string[]
-	 * @throws \Exception
 	 */
 	public function get_report_data() {
 		$compatibility_status = $this->compatibility_tag_service->check(
@@ -127,7 +126,7 @@ class Compatibility_Tag_Report extends Base {
 
 		return Plugin::$instance->wp
 			->get_plugins()
-			->only( $compatibility_status->keys() )
+			->only( $compatibility_status->keys()->all() )
 			->merge_recursive( $compatibility_status );
 	}
 

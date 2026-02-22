@@ -39,14 +39,15 @@
 			// Replace server-side written pluses with spaces.
 			// If we can't decode the cookie, ignore it, it's unusable.
 			s = decodeURIComponent(s.replace(pluses, ' '));
-		} catch(e) {
+		} catch (e) {
 			return;
 		}
 
 		try {
 			// If we can't parse the cookie, ignore it, it's unusable.
 			return config.json ? JSON.parse(s) : s;
-		} catch(e) {}
+		} catch (e) {
+		}
 	}
 
 	function read(s, converter) {
@@ -67,11 +68,11 @@
 
 			return (document.cookie = [
 				encode(key), '=', stringifyCookieValue(value),
-				options.expires  ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
-				options.path     ? '; path=' + options.path : '',
-				options.domain   ? '; domain=' + options.domain : '',
+				options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
+				options.path ? '; path=' + options.path : '',
+				options.domain ? '; domain=' + options.domain : '',
 				options.samesite ? '; samesite=' + options.samesite : '',
-				options.secure   ? '; secure' : ''
+				options.secure ? '; secure' : ''
 			].join(''));
 		}
 
@@ -105,13 +106,13 @@
 	};
 
 	config.defaults = {
-		'samesite' : 'lax'
+		'samesite': 'lax'
 	};
 
 	$.removeCookie = function (key, options) {
 		if ($.cookie(key) !== undefined) {
 			// Must not alter options, thus extending a fresh object...
-			$.cookie(key, '', $.extend({}, options, { expires: -1 }));
+			$.cookie(key, '', $.extend({}, options, {expires: -1}));
 			return true;
 		}
 		return false;
@@ -129,21 +130,30 @@
  * @param {string} name
  * @param {number} [expirationInDays]
  * @param {boolean} [jsonEncodingEnabled]
+ * @param {string} [path]
+ * @param {string} [fullCookieName]
  * @constructor
  */
-function WsAmePreferenceCookie(name, expirationInDays, jsonEncodingEnabled) {
+function WsAmePreferenceCookie(name, expirationInDays, jsonEncodingEnabled, path, fullCookieName) {
 	if (typeof expirationInDays === 'undefined') {
 		expirationInDays = 90;
 	}
 	if (typeof jsonEncodingEnabled === 'undefined') {
 		jsonEncodingEnabled = false;
 	}
+	if (typeof path === 'undefined') {
+		path = '/';
+	}
 
-	//Full name = unique prefix + name with the first letter capitalized.
-	this.fullCookieName = 'amePref' + name.charAt(0).toUpperCase() + name.slice(1);
+	if ((typeof fullCookieName !== 'string') || (fullCookieName === '')) {
+		//Full name = unique prefix + name with the first letter capitalized.
+		fullCookieName = 'amePref' + name.charAt(0).toUpperCase() + name.slice(1);
+	}
+
+	this.fullCookieName = fullCookieName;
 	this.jsonEncodingEnabled = jsonEncodingEnabled;
 	this.cookieOptions = {
-		'path': '/',
+		'path': path,
 		'samesite': 'lax'
 	};
 	if (expirationInDays > 0) {

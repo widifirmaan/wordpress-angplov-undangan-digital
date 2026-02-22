@@ -18,8 +18,8 @@ class ControlBuilder extends BaseElementBuilder {
 	 * @param array $settings
 	 * @param array $params
 	 */
-	public function __construct($controlClass, $settings = array(), $params = array()) {
-		parent::__construct($controlClass, $params);
+	public function __construct($controlClass, $settings = array(), $params = array(), $children = []) {
+		parent::__construct($controlClass, $params, $children);
 		$this->settings = $settings;
 	}
 
@@ -93,11 +93,15 @@ class ControlBuilder extends BaseElementBuilder {
 		return new GroupBuilder($groupTitle, array($this));
 	}
 
+	public function getSettings() {
+		return $this->settings;
+	}
+
 	/**
 	 * @return ElementClass
 	 */
 	public function build() {
 		$className = $this->elementClass;
-		return new $className($this->settings, $this->params);
+		return new $className($this->settings, $this->params, $this->buildChildren());
 	}
 }

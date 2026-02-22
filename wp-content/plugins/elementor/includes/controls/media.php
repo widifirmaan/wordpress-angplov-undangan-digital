@@ -1,7 +1,6 @@
 <?php
 namespace Elementor;
 
-use Elementor\Core\Files\Uploads_Manager;
 use Elementor\Core\Utils\Hints;
 use Elementor\Modules\DynamicTags\Module as TagsModule;
 
@@ -52,6 +51,14 @@ class Control_Media extends Control_Base_Multiple {
 		];
 	}
 
+	public function on_export( $settings ) {
+		if ( ! empty( $settings['url'] ) ) {
+			do_action( 'elementor/templates/collect_media_url', $settings['url'], $settings );
+		}
+
+		return $settings;
+	}
+
 	/**
 	 * Import media images.
 	 *
@@ -61,13 +68,24 @@ class Control_Media extends Control_Base_Multiple {
 	 * @since 1.0.0
 	 * @access public
 	 *
-	 * @param array $settings Control settings
+	 * @param array $settings Control settings.
 	 *
 	 * @return array Control settings.
 	 */
 	public function on_import( $settings ) {
 		if ( empty( $settings['url'] ) ) {
 			return $settings;
+		}
+
+		$local_file_path = \Elementor\TemplateLibrary\Classes\Media_Mapper::get_local_file_path( $settings['url'] );
+		$imported_attachment = false;
+
+		if ( $local_file_path !== $settings['url'] && file_exists( $local_file_path ) ) {
+			$imported_attachment = Plugin::$instance->templates_manager->get_import_images_instance()->import_local_file( $local_file_path );
+		}
+
+		if ( $imported_attachment ) {
+			return $imported_attachment;
 		}
 
 		$settings = Plugin::$instance->templates_manager->get_import_images_instance()->import( $settings );
@@ -90,7 +108,7 @@ class Control_Media extends Control_Base_Multiple {
 	 * @since 3.4.6
 	 * @deprecated 3.5.0
 	 *
-	 * @param $mimes
+	 * @param mixed $mimes
 	 * @return mixed
 	 */
 	public function support_svg_and_json_import( $mimes ) {
@@ -111,7 +129,7 @@ class Control_Media extends Control_Base_Multiple {
 	public function enqueue() {
 		global $wp_version;
 
-		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
+		$suffix = Utils::is_script_debug() ? '' : '.min';
 		wp_enqueue_media();
 
 		wp_enqueue_style(
@@ -213,7 +231,7 @@ class Control_Media extends Control_Base_Multiple {
 				<div class="{{{ inputWrapperClasses }}}">
 					<div class="elementor-control-media__content elementor-control-tag-area elementor-control-preview-area">
 						<div class="elementor-control-media-area">
-							<div class="elementor-control-media__remove elementor-control-media__content__remove" title="<?php echo esc_attr__( 'Remove', 'elementor' ); ?>">
+							<div class="elementor-control-media__remove elementor-control-media__content__remove" data-tooltip="<?php echo esc_attr__( 'Remove', 'elementor' ); ?>">
 								<i class="eicon-trash-o" aria-hidden="true"></i>
 								<span class="elementor-screen-only"><?php echo esc_html__( 'Remove', 'elementor' ); ?></span>
 							</div>
@@ -249,7 +267,9 @@ class Control_Media extends Control_Base_Multiple {
 						</div>
 					</div>
 
-					<?php /* ?>
+					<?php
+					/*
+					?>
 					<div class="elementor-control-media__warnings" role="alert" style="display: none;">
 						<?php
 						Hints::get_notice_template( [
@@ -259,26 +279,9 @@ class Control_Media extends Control_Base_Multiple {
 						] );
 						?>
 					</div>
-					<?php */ ?>
-
-					<?php if ( Hints::should_display_hint( 'image-optimization' ) ) : ?>
-					<div class="elementor-control-media__promotions" role="alert" style="display: none;">
-						<?php
-						Hints::get_notice_template( [
-							'display' => ! Hints::is_dismissed( 'image-optimization' ),
-							'type' => 'info',
-							'content' => __( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' ),
-							'icon' => true,
-							'dismissible' => 'image_optimizer_hint',
-							'button_text' => Hints::is_plugin_installed( 'image-optimization' ) ? __( 'Activate Plugin', 'elementor' ) : __( 'Install Plugin', 'elementor' ),
-							'button_event' => 'image_optimizer_hint',
-							'button_data' => [
-								'action_url' => Hints::get_plugin_action_url( 'image-optimization' ),
-							],
-						] ); ?>
-					</div>
-					<?php endif; ?>
-
+					<?php
+					*/ ?>
+					<?php $this->maybe_display_io_hints(); ?>
 				</div>
 			<# } /* endif isViewable() */ else { #>
 				<div class="elementor-control-media__file elementor-control-preview-area">
@@ -292,11 +295,11 @@ class Control_Media extends Control_Base_Multiple {
 						</div>
 					</div>
 					<div class="elementor-control-media__file__controls">
-						<div class="elementor-control-media__remove elementor-control-media__file__controls__remove" title="<?php echo esc_attr__( 'Remove', 'elementor' ); ?>">
+						<div class="elementor-control-media__remove elementor-control-media__file__controls__remove" data-tooltip="<?php echo esc_attr__( 'Remove', 'elementor' ); ?>">
 							<i class="eicon-trash-o" aria-hidden="true"></i>
 							<span class="elementor-screen-only"><?php echo esc_html__( 'Remove', 'elementor' ); ?></span>
 						</div>
-						<div class="elementor-control-media__file__controls__upload-button elementor-control-media-upload-button" title="<?php echo esc_attr__( 'Upload', 'elementor' ); ?>">
+						<div class="elementor-control-media__file__controls__upload-button elementor-control-media-upload-button" data-tooltip="<?php echo esc_attr__( 'Upload', 'elementor' ); ?>">
 							<i class="eicon-upload" aria-hidden="true"></i>
 							<span class="elementor-screen-only"><?php echo esc_html__( 'Upload', 'elementor' ); ?></span>
 						</div>
@@ -319,6 +322,8 @@ class Control_Media extends Control_Base_Multiple {
 						</select>
 					</div>
 				</div>
+
+				<div class="elementor-control-field-description"><?php echo esc_html__( 'Image size settings don’t apply to Dynamic Images.', 'elementor' ); ?></div>
 			</div>
 			<# } #>
 
@@ -327,7 +332,68 @@ class Control_Media extends Control_Base_Multiple {
 		<?php
 	}
 
-	private function get_image_sizes() : array {
+	private function maybe_display_io_hints() {
+		$plugin_slug = 'image-optimization';
+
+		if ( ! Hints::should_display_hint( $plugin_slug ) ) {
+			return;
+		}
+
+		$one_subscription = Hints::is_plugin_connected_to_one_subscription();
+		$is_installed = Hints::is_plugin_installed( $plugin_slug );
+		$is_active = Hints::is_plugin_active( $plugin_slug );
+
+		if ( $is_active ) {
+			return;
+		}
+
+		if ( $one_subscription ) {
+			if ( ! $is_installed ) {
+				$content = esc_html__( 'Optimize your images to improve site speed and performance. Image Optimizer is included in your ONE subscription.', 'elementor' );
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+				$source = 'io-editor-image-one-install';
+			} elseif ( ! $is_active ) {
+				$content = esc_html__( 'Your ONE subscription includes Image Optimizer. Activate it to optimize images and improve site performance.', 'elementor' );
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+				$source = 'io-editor-image-one-activate';
+			}
+		} else {
+			$content = esc_html__( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' );
+			if ( ! $is_installed ) {
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+				$source = 'io-editor-image-install';
+			} elseif ( ! $is_active ) {
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+				$source = 'io-editor-image-activate';
+			}
+		}
+		?>
+		<div class="elementor-control-media__promotions" role="alert">	
+			<?php
+			Hints::get_notice_template( [
+				'display' => ! Hints::is_dismissed( $plugin_slug ),
+				'type' => 'info',
+				'icon' => true,
+				'heading' => '',
+				'content' => $content,
+				'dismissible' => 'image_optimizer_hint',
+				'button_text' => $button_text,
+				'button_event' => 'image_optimizer_hint',
+				'button_data' => [
+					'action_url' => $button_url,
+					'source' => $source,
+				],
+			] );
+			?>
+		</div>
+		<?php
+	}
+
+	private function get_image_sizes(): array {
 		$wp_image_sizes = Group_Control_Image_Size::get_all_image_sizes();
 
 		$image_sizes = [];
@@ -428,6 +494,10 @@ class Control_Media extends Control_Base_Multiple {
 
 		$alt = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
 		if ( ! $alt ) {
+			if ( Utils::has_invalid_post_permissions( $attachment ) ) {
+				return '';
+			}
+
 			$alt = $attachment->post_excerpt;
 			if ( ! $alt ) {
 				$alt = $attachment->post_title;
@@ -448,7 +518,7 @@ class Control_Media extends Control_Base_Multiple {
 		return wp_get_attachment_image_url( $control_value['id'], $control_value['size'] );
 	}
 
-	public static function sanitise_text( $string ) {
-		return esc_attr( strip_tags( $string ) );
+	public static function sanitise_text( $text ) {
+		return esc_attr( strip_tags( $text ) );
 	}
 }

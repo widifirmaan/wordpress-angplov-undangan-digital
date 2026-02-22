@@ -409,7 +409,7 @@ function cdp_insert_new_post($areWePro = false) {
      * @param $settings (array of preselected settings of profile or by user)
      * @return array with insert ready values for wordpress post || false on wrong $post
      */
-    function cdp_filter_post($post, $swap, $opt, $settings, $site, $taxonomies = false, $areWePro = false) {
+    function cdp_filter_post($post, $swap, $opt, $settings, $site, $taxonomies = false, $areWePro = false, $globals = false) {
       
         // If $post has wrong format return false
         if (!(is_array($post) || is_object($post)))
@@ -451,6 +451,8 @@ function cdp_insert_new_post($areWePro = false) {
                 array_push($ft[$tn], $taxonomy->term_id);
             }
         }
+        $is_elementor = cdp_is_elementor_post($post['ID']);
+        $content_meta = $is_elementor ? get_post_meta($post['ID'], '_elementor_data', true) : addslashes($post['post_content']);
 
         // Create array with required values and contant values
         $new = array(
@@ -458,7 +460,7 @@ function cdp_insert_new_post($areWePro = false) {
             'post_date' => ($settings['date'] ? $post['post_date'] : current_time('mysql')),
             'post_status' => ($settings['status'] ? $post['post_status'] : 'draft'),
             'post_author' => ($settings['author'] ? $post['post_author'] : wp_get_current_user()->ID),
-            'post_content' => ($settings['content']) ? addslashes($post['post_content']) : '',
+            'post_content' => ($settings['content'] ? $content_meta : ''),
             'comment_status' => $post['comment_status'], // that's additional element which cannot be edited by user
             'post_parent' => $post['post_parent'] // that's additional element which cannot be edited by user
         );
@@ -487,8 +489,17 @@ function cdp_insert_new_post($areWePro = false) {
         }
 
         // Add optional values of post – depending on settings
-        if ($settings['slug'])
+        if ($settings['slug']){
             $new['post_name'] = $post['post_name'];
+            if ($globals['others']['cdp-take-over-original-slug'] == 'true') {
+                $original_new_slug = $post['post_name'] . '-old';
+                wp_update_post(array(
+                    'ID' => $post['ID'],
+                    'post_name' => $original_new_slug
+                ));
+            }
+
+        }
         if ($settings['excerpt'])
             $new['post_excerpt'] = $post['post_excerpt'];
         if ($settings['template'])
@@ -545,6 +556,11 @@ function cdp_insert_new_post($areWePro = false) {
             array('_cdp_origin_title' => $title),
             array('_cdp_counter' => '0')
         );
+
+        if (isset($metas['_elementor_data']) && $settings['content'] !== true) { // Remove elementor content if content copy is disabled
+            $prepared[] = array('_elementor_data' => []);
+            unset($metas['_elementor_data']);
+        }
 
         // Iterate through every meta index
         foreach ($metas as $meta => $vals) {
@@ -722,7 +738,7 @@ function cdp_insert_new_post($areWePro = false) {
 
         $uploadsDirNew = wp_upload_dir()['basedir'];
         $alreadyReplaced = false;
-
+        $originalPostName = isset($data['post_name']) ? $data['post_name'] : '';
         // Loop for each post iteration
         for ($i = 0; $i < $times; ++$i) {
 
@@ -732,6 +748,9 @@ function cdp_insert_new_post($areWePro = false) {
 
             // Replace title with Counter if multiple copies
             $data['post_title'] = str_replace('[Counter]', ($counter + $i), $base_title);
+            if ($i > 0 && isset($data['post_name']) && strlen($data['post_name']) > 0) {
+              $data['post_name'] = $originalPostName . '-' . $i;
+            }
 
             // Adjust URLs for new subsite
             if ($alreadyReplaced == false && $areWePro && isset($gosCurrent['cdp-premium-replace-domain']) && $gosCurrent['cdp-premium-replace-domain'] == 'true') {
@@ -1128,8 +1147,12 @@ function cdp_insert_new_post($areWePro = false) {
 
             // Run process and validate response
             $childrens = cdp_check_childs($id, $areWePro); // if sizeof($this) == has childs
-            $post_data = cdp_filter_post($post, $swap, $pConv, $settings, $site, $taxonomies, $areWePro); // can be false
+            $post_data = cdp_filter_post($post, $swap, $pConv, $settings, $site, $taxonomies, $areWePro, $globals); // can be false
             $meta_data = cdp_filter_meta($meta, $settings, $id, $areWePro, $site, $post_data['post_title']); // can be false
+            if (isset($meta['_elementor_template_type'])) { // Add Elementor template type to post data to prevent setting the type of template to 'page' by default in Elementor after creating the new post
+                $post_data['meta_input']['_elementor_template_type'] = $meta['_elementor_template_type'][0];
+                unset($meta['_elementor_template_type']);
+            }
             $inserted_posts = cdp_insert_post($id, $post_data, $times, $areWePro, $isChild, $p_ids, $site); // $res['error'] must be == 0
             $inserted_metas = cdp_insert_post_meta($inserted_posts['ids'], $meta_data, $areWePro, $inserted_posts['counter'], $site); // sizeof($res['error']) must be == 0
 
@@ -1349,6 +1372,18 @@ function cdp_get_all_posts() {
         $output['meta'][$p->ID] = get_post_meta($p->ID);
 
     echo json_encode(cdp_sanitize_array($output));
+}
+
+/** –– **\
+ * This function return either the given post id is elementor post or not
+ * @param int $post_id
+ * @return boolean
+ */
+function cdp_is_elementor_post($post_id) {
+    if (get_post_meta($post_id, '_elementor_edit_mode', true) === 'builder') {
+        return true;
+    }
+    return false;
 }
 
 /** –– * */

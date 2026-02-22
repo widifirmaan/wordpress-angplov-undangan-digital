@@ -19,7 +19,6 @@
 		 * Binds events for the Astra Theme.
 		 *
 		 * @since 1.0.0
-		 * @access private
 		 * @method _bind
 		 */
 		_bind: function()
@@ -75,19 +74,18 @@
 
 			var $message = jQuery(event.target);
 			var $init = $message.data('init');
-			var activatedSlug;
+			var activatedSlug = $init;
 
 			if (typeof $init === 'undefined') {
 				var $message = jQuery('.astra-install-recommended-plugin[data-slug=' + response.slug + ']');
 				activatedSlug = response.slug;
-			} else {
-				activatedSlug = $init;
 			}
 
 			// Transform the 'Install' button into an 'Activate' button.
-			var $init = $message.data('init');
+			$init = $message.data('init');
 			var activatingText = astra.recommendedPluiginActivatingText;
 			var astraSitesLink = astra.astraSitesLink;
+			const astraOnboardingLink = astra?.astraOnboardingLink;
 			var astraPluginRecommendedNonce = astra.astraPluginManagerNonce;
 
 			$message.removeClass( 'install-now installed button-disabled updated-message' )
@@ -115,7 +113,8 @@
 
 						$message.parent('.ast-addon-link-wrapper').parent('.astra-recommended-plugin').addClass('active');
 
-						jQuery(document).trigger( 'ast-after-plugin-active', [astraSitesLink, activatedSlug] );
+						const redirectionLink = astraOnboardingLink || astraSitesLink;
+						jQuery(document).trigger( 'ast-after-plugin-active', [ redirectionLink, activatedSlug ] );
 
 					} else {
 
@@ -165,7 +164,7 @@
 		/**
 		 * After plugin active redirect and deactivate activation notice
 		 */
-		_disableActivcationNotice: function( event, astraSitesLink, activatedSlug )
+		_disableActivcationNotice: function( event, redirectionLink, activatedSlug )
 		{
 			event.preventDefault();
 
@@ -173,7 +172,12 @@
 				if ( 'undefined' != typeof AstraNotices ) {
 			    	AstraNotices._ajax( 'astra-sites-on-active', '' );
 				}
-				window.location.href = astraSitesLink + '&ast-disable-activation-notice';
+				const disableActivationNoticeParam = redirectionLink?.includes( 'onboarding' ) ? '' : '&ast-disable-activation-notice';
+				
+				// Add delay to prevent plugin activation hook from interfering with redirect
+				setTimeout( function() {
+					window.location.href = redirectionLink + disableActivationNoticeParam;
+				}, 1000 );
 			}
 		},
 	};

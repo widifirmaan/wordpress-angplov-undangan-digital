@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Copy & Delete Posts
  * Description: The best solution to easily make duplicates of your posts & pages, and delete them in one go.
- * Version: 1.4.7
+ * Version: 1.5.2
  * Text Domain: copy-delete-posts
  * Author: Inisev
  * Author URI: https://inisev.com
@@ -31,7 +31,7 @@ analyst_init(array(
  * @since 1.0.0
  */
 // Plugin constants
-define('CDP_VERSION', '1.4.7');
+define('CDP_VERSION', '1.5.2');
 define('CDP_WP_VERSION', get_bloginfo('version'));
 define('CDP_SCRIPT_DEBUG', false);
 define('CDP_ROOT_DIR', __DIR__);
@@ -61,13 +61,7 @@ if (is_admin()) {
  * @since 1.0.0
  */
 register_activation_hook(__FILE__, function () {
-    if (function_exists('activate_plugin')) {
         add_option('_cdp_redirect', true);
-        $cdp_premium_path = WP_PLUGIN_DIR . '/copy-delete-posts-premium';
-        $plugin = 'copy-delete-posts-premium/copy-delete-posts-premium.php';
-        if (!is_plugin_active($plugin) && is_dir($cdp_premium_path))
-            activate_plugin($plugin);
-    }
 
     if (get_option('_cdp_review', false) == false) {
         $review = array(
@@ -80,6 +74,7 @@ register_activation_hook(__FILE__, function () {
 
     do_action('cdp_plugin_setup');
 });
+
 /** –– * */
 /** –– **\
  * Fired on plugin deactivation.
@@ -145,7 +140,12 @@ add_action('upgrader_process_complete', function () {
 		if (!is_dir(WP_PLUGIN_DIR . '/copy-delete-posts-premium')) {
 			if (!(class_exists('Inisev\Subs\Inisev_Review') || class_exists('Inisev_Review'))) require_once CDP_ROOT_DIR . '/modules/review/review.php';
 			$review_banner = new \Inisev\Subs\Inisev_Review(CDP_ROOT_FILE, CDP_ROOT_DIR, 'copy-delete-posts', 'Copy & Delete Posts', 'https://bit.ly/2VeAf2E', 'copy-delete-posts');
-		}
+        }
+
+        if (!(class_exists('\Inisev\Subs\New_BB_Banner') || class_exists('Inisev\Subs\New_BB_Banner') || class_exists('New_BB_Banner'))) {
+            require_once __DIR__ . '/modules/new-bb-banner/misc.php';
+            new \Inisev\Subs\New_BB_Banner(CDP_ROOT_FILE,  CDP_ROOT_DIR, 'copy-delete-posts', 'Copy & Delete Posts', 'copy-delete-posts');
+        }
 
 	});
 /** –– **/
@@ -164,23 +164,11 @@ add_action('admin_init', function () {
     }
 
     global $cdp_premium;
-    $cdp_premium_path = WP_PLUGIN_DIR . '/copy-delete-posts-premium';
     $cdp_premium_ver_path = WP_PLUGIN_DIR . '/copy-delete-posts-premium/version.txt';
     if (defined('CDP_PREMIUM_VERSION') && version_compare(CDP_PREMIUM_VERSION, CDP_VERSION, '!=')) {
         update_option('_cdp_mishmash', true);
-    } else {
-        if (is_dir($cdp_premium_path) && file_exists($cdp_premium_ver_path)) {
-            $cdp_prem_ver_file = fopen($cdp_premium_ver_path, 'r') or false;
-            $cdp_prem_ver = fgets($cdp_prem_ver_file);
-            fclose($cdp_prem_ver_file);
-
-            if ((trim($cdp_prem_ver) == CDP_VERSION) && !is_plugin_active($cdp_premium)) {
-                activate_plugin($cdp_premium, '', false, true);
-                // add_option('_cdp_redirect', false);
-            }
-            if (trim($cdp_prem_ver) == CDP_VERSION)
-                update_option('_cdp_mishmash', false);
-        }
+    } else{
+        delete_option('_cdp_mishmash');
     }
     if (is_plugin_active($cdp_premium) && !file_exists($cdp_premium_ver_path)) {
         if (is_plugin_active($cdp_premium))
@@ -363,6 +351,15 @@ add_action('admin_menu', function () {
     remove_submenu_page($parentSlug, $parentSlug);
 });
 /** –– * */
+/** –– **\
+ * Add cdp scripts and styles to the whitelist of mailpoet. 
+ * @since 1.5.0
+ */
+add_filter('mailpoet_conflict_resolver_whitelist_style', function ($whitelist) {
+    // Add your plugin's unique identifier or path to the whitelist
+    $whitelist[] = 'cdp';
+    return $whitelist;
+});
 /** –– **\
  * Add copy option to Quick Actions of Posts.
  * @since 1.0.0
@@ -653,7 +650,7 @@ add_action('admin_init', function () {
       cdp_vars($hx, $cdp_plug_url, $post_id, $hasParent, true);
       cdp_tooltip_content($profiles);
       cdp_modal($screen, $profiles);
-  });
+  }, 12);
 }, 10000);
 /** –– * */
 /** –– **\
@@ -967,6 +964,7 @@ function cdp_default_global_options() {
         'cdp-premium-import' => 'false',
         'cdp-premium-hide-tooltip' => 'false',
         'cdp-premium-replace-domain' => 'false',
+        'cdp-delete-on-uninstall' => 'false',
         'cdp-menu-in-settings' => 'false'
     );
 }

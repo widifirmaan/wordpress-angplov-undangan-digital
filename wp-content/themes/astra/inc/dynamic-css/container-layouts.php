@@ -22,6 +22,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 function astra_check_any_page_builder_is_active( $post_id ) {
 	$post = get_post( $post_id );
 
+	if ( ! $post ) {
+		return false; // Prevent further execution if $post is null.
+	}
+
 	if ( class_exists( '\Elementor\Plugin' ) ) {
 		/** @psalm-suppress UndefinedClass */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
 		$document = Elementor\Plugin::$instance->documents->get( $post_id ); // phpcs:ignore PHPCompatibility.LanguageConstructs.NewLanguageConstructs.t_ns_separatorFound
@@ -134,7 +138,7 @@ function astra_container_layout_css() {
 	}
 
 	$customizer_default_update = astra_check_is_structural_setup();
-	$page_title_header_padding = ( true === $customizer_default_update ) ? '2em' : '4em';
+	$page_title_header_padding = true === $customizer_default_update ? '2em' : '4em';
 	// Transparent Header.
 	$display_title = get_post_meta( absint( astra_get_post_id() ), 'site-post-title', true );
 	/** @psalm-suppress InvalidCast */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
@@ -206,8 +210,7 @@ function astra_container_layout_css() {
 			/** @psalm-suppress InvalidArgument */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
 			if ( 'disabled' !== $display_title && true === apply_filters( 'astra_stretched_layout_with_spacing', true ) && false === astra_check_any_page_builder_is_active( astra_get_post_id() ) ) {
 				/** @psalm-suppress InvalidArgument */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
-				$page_container_css .= '
-					.ast-single-post.ast-page-builder-template .site-main > article, .woocommerce.ast-page-builder-template .site-main' . $post_navigation_selector . ' {
+				$page_container_css .= astra_parse_selector( '.ast-single-post.ast-page-builder-template .site-main > article, .woocommerce.ast-page-builder-template .site-main' . $post_navigation_selector, 'wc' ) . ' {
 						padding-top: 2em;
 						padding-left: 20px;
 						padding-right: 20px;

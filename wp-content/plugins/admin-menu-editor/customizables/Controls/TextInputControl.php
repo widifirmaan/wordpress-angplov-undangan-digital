@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\StringSetting;
 
@@ -12,7 +13,7 @@ class TextInputControl extends ClassicControl {
 	/**
 	 * @var StringSetting
 	 */
-	protected $mainSetting;
+	protected $mainBinding;
 
 	/**
 	 * @var bool Whether to style the value as code (e.g. using fixed width fonts).
@@ -21,8 +22,8 @@ class TextInputControl extends ClassicControl {
 
 	protected $inputType = 'text';
 
-	public function __construct($settings = array(), $params = array()) {
-		parent::__construct($settings, $params);
+	public function __construct($settings = array(), $params = array(), $children = []) {
+		parent::__construct($settings, $params, $children);
 
 		$this->hasPrimaryInput = true;
 		$this->isCode = !empty($params['isCode']);
@@ -31,31 +32,31 @@ class TextInputControl extends ClassicControl {
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
+	public function renderContent(Renderer $renderer, Context $context) {
 		$classes = array('regular-text');
 		if ( $this->isCode ) {
 			$classes[] = 'code';
 		}
 		$classes[] = 'ame-text-input-control';
-		$value = $this->getMainSettingValue();
+		$value = $this->getMainSettingValue(null, $context);
 
 		//phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- buildInputElement() is safe
 		echo $this->buildInputElement(
-			array(
+			$context, array(
 				'type'      => $this->inputType,
 				'value'     => ($value === null) ? '' : $value,
 				'class'     => $classes,
 				'style'     => $this->styles,
-				'data-bind' => $this->makeKoDataBind([
+				'data-bind' => $this->makeKoDataBind(array_merge([
 					'value' => $this->getKoObservableExpression($value),
-				]),
+				], $this->getKoEnableBinding())),
 			)
 		);
 		//phpcs:enable
 		$this->outputSiblingDescription();
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
 		$params['isCode'] = $this->isCode;
 		$params['inputType'] = $this->inputType;

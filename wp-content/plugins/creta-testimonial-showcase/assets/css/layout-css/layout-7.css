@@ -1,0 +1,335 @@
+.cretats-testimonial-shortcode{
+    max-width: 100% !important;
+    margin: 0 !important;
+}
+
+.testimonial-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    max-width: 1000px;
+    margin: auto; 
+}
+
+.testimonial-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+
+
+.testimonial-box {
+    background: #b3d9ff;
+    border-radius: 15px;
+    padding: 30px 50px;
+    position: relative;
+    background: #b3d9ff;
+    flex: 1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.quote-icon {
+    position: absolute;
+    top: -54px;
+    right: 186px;
+    font-size: 100px;
+    color: #0B2B46;
+    font-weight: bold;
+}
+
+.testimonial-box h5 {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.testimonial-box span {
+    font-size: 14px;
+    color: #333;
+    /* margin-left: 10px; */
+}
+
+.testimonial-box p {
+    font-size: 14px;
+    margin-top: 10px;
+    color: #1a1a1a;
+}
+
+.rating {
+    background: #fdd835;
+    padding: 4px 12px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    display: inline-block;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+}
+
+/* .container {
+    max-width: 1000px;
+    margin: 0 auto;
+} */
+
+
+.rating p {
+    display: none;
+}
+
+
+/* ******************26/04/2025***************** */
+.testimonial-box::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 15%;
+    height: 100%;
+    background: linear-gradient(61deg, #a0cfff00 47%, #000000 123%);
+    box-shadow: 0 4px 10px rgb(0 0 0 / 0%);
+    opacity: 1;
+    border-radius: 0px 10px 10px 0px;
+    /* transform: translateX(5px) rotate(356deg); */
+}
+h5.smart-slider-title-layout-7 {
+    text-transform: capitalize;
+    font-family: "Poppins", Sans-serif;
+}
+p.smart-slider-description-layout-7 {
+    font-family: "Poppins", Sans-serif;
+    font-weight: 500;
+    letter-spacing: 2px;
+}
+img.smart-slider-img-layout-7 {
+    background-color: #f4e2d4;
+}
+@media screen and (min-width:768px) and (max-width:1050px){
+    .testimonial-box::after {
+        width: 32% !important;
+    }
+}
+@media screen and (min-width:568px) and (max-width:767px){
+    .testimonial-box::after {
+
+        width: 43%;
+
+        background: linear-gradient(61deg, #a0cfff00 63%, #000000 123%);
+      
+    }
+}
+
+@media screen and (min-width:320px) and (max-width:567px){
+.testimonial-box::after {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(61deg, #a0cfff00 68%, #000000 127%);
+}
+.testimonial-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    flex-direction: column;
+}
+}
+
+
+
+
+
+
+.testimonial-container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.testimonial-slider .item {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin: 0 10px;
+}
+
+.testimonial-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+
+
+.testimonial-box {
+    background: #b3d9ff;
+    flex: 1;
+    position: relative;
+    
+    border-radius: 15px;
+    padding: 20px 30px;
+}
+
+
+
+.testimonial-box h5 {
+    font-family: "Poppins", Sans-serif;
+    text-transform: capitalize;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.testimonial-box span {
+    font-size: 14px;
+    color: #333;
+}
+
+.testimonial-box p {
+    font-family: "Poppins", Sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    font-size: 14px;
+    margin-top: 10px;
+    color: #1a1a1a;
+}
+
+.rating {
+    background: #fdd835;
+    padding: 4px 12px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+}
+
+.testimonial-container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.testimonial-slider .item {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.testimonial-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.profile-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background-color: #f4e2d4;
+}
+
+.testimonial-box {
+    background: #b3d9ff;
+    flex: 1;
+    position: relative;
+    
+    border-radius: 15px;
+    padding: 20px 30px;
+}
+
+
+
+.testimonial-box h5 {
+    font-family: "Poppins", Sans-serif;
+    text-transform: capitalize;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.testimonial-box span {
+    font-size: 14px;
+    color: #333;
+}
+
+.testimonial-box p {
+    font-family: "Poppins", Sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    font-size: 14px;
+    margin-top: 10px;
+    color: #1a1a1a;
+}
+
+.rating {
+    background: #fdd835;
+    padding: 4px 12px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+}
+
+.smart-slider-top-heading {
+    font-weight: 500;
+    font-size: 32px;
+    font-family: "Poppins", Sans-serif;
+}
+.smart-slider-top-desc {
+    font-weight: 500;
+    font-size: 32px;
+    font-family: "Poppins", Sans-serif;
+}
+
+@media screen and (max-width:530px){
+    h5.smart-slider-title-layout-7 {
+        margin-top: 29px;
+    }
+}
+@media screen and (max-width:375px){
+    .quote-icon {
+        
+        top: -54px;
+        right: 139px;
+        
+    }
+}
+
+/* 30 apr */
+.cretats-testimonial-shortcode{
+    width: 80%;
+    margin: 0 auto !important;
+}
+
+
+/* 7 may */
+.testimonial-scroll-container {
+    height: 500px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    padding-right: 10px;
+    scrollbar-width: none; 
+    -ms-overflow-style: none; 
+}
+
+.testimonial-scroll-container::-webkit-scrollbar {
+    display: none; 
+}

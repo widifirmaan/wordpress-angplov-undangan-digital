@@ -1,6 +1,7 @@
 <?php
 
 use YahnisElsts\AdminMenuEditor\WebpackRegistry\WebpackAssetRegistry;
+use YahnisElsts\WpDependencyWrapper\v1\ScriptDependency;
 
 class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	const WPML_CONTEXT = 'admin-menu-editor menu texts';
@@ -11,6 +12,8 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 	const DIRECTLY_GRANTED_VIRTUAL_CAPS = 2;
 	const ALL_VIRTUAL_CAPS = 3;
+
+	const ADMIN_MENU_STRUCTURE_COMPONENT = 'admin_menu_structure';
 
 	/**
 	 * @var string The heading tag to use for admin pages.
@@ -85,7 +88,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	private $virtual_caps_for_this_call = array();
 
 	public $disable_virtual_caps = false;
-	public $virtual_cap_mode = 3; //self::ALL_VIRTUAL_CAPS
+	public $virtual_cap_mode = self::ALL_VIRTUAL_CAPS;
 
 	/**
 	 * @var array<string,true|string> An index of URLs relative to /wp-admin/. Any menus that match the index will be ignored.
@@ -107,7 +110,11 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 */
 	private $loaded_modules = array();
 	private $are_modules_loaded = false;
-	private $is_loading_modules = false;
+
+	const MODULE_STATE_LOADING = 1;
+	const MODULE_STATE_LOADED = 2;
+	private $module_load_state = array();
+	private $module_loader_recursion_depth = 0;
 
 	/**
 	 * @var array List of capabilities that are used in the default admin menu. Used to detect meta capabilities.
@@ -132,8 +139,6 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	private $last_menu_exception = null;
 
 	private static $jquery_plugins = array(
-		//jQuery JSON plugin
-		'jquery-json'       => 'js/jquery.json.js',
 		//jQuery sort plugin
 		'jquery-sort'       => 'js/jquery.sort.js',
 		//qTip2 - jQuery tooltip plugin
@@ -143,12 +148,20 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		//jQuery cookie plugin
 		'ame-jquery-cookie' => 'js/jquery.biscuit.js',
 	);
-	private $registered_jquery_plugins = array();
+	/**
+	 * @var array<string,ScriptDependency>
+	 */
+	private $jquery_plugin_instances = array();
 
 	/**
 	 * @var null|\YahnisElsts\AdminMenuEditor\WebpackRegistry\WebpackAssetRegistry
 	 */
 	private $webpack_registry = null;
+
+	/**
+	 * @var ameCustomizationFeatureToggle
+	 */
+	private $menu_structure_feature;
 
 	function init(){
 		$this->sitewide_options = true;
@@ -205,6 +218,11 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 			//Verbosity level of menu permission errors.
 			'error_verbosity' => self::VERBOSITY_NORMAL,
+
+			//Enable/disable a series of size optimizations for the menu configuration.
+			//For historical reasons, this is called "compression" in some parts of the code,
+			//but it's closer to using a more space-efficient format.
+			'optimize_custom_menu_size' => true,
 
 			//Enable/disable menu configuration compression. Enabling it makes the DB row much smaller,
 			//but adds decompression overhead to very admin page.
@@ -360,10 +378,27 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			'admin.php?page=mint-mail-automation-editor' => true,
 			//Enable Media Replace 4.1.5
 			'upload.php?page=enable-media-replace/enable-media-replace.php' => true,
+			//Elementor 3.26.4
+			'admin.php?page=elementor-connect' => true,
+			//Elementor Pro (based on user reports, not verified)
+			'elementor-pro-notes-proxy'        => true,
+			//Post SMTP 3.1.3
+			'index.php?page=post-about'        => true,
+			'index.php?page=post-credits'      => true,
+			//Advanced Flat Rate Shipping For WooCommerce 4.4.0 (submitted by the developer)
+			'admin.php?page=afrsm-pro-get-started'       => true,
+			'admin.php?page=afrsm-pro-edit-shipping'     => true,
+			'admin.php?page=afrsm-wc-shipping-zones'     => true,
+			'admin.php?page=afrsm-pro-import-export'     => true,
+			'admin.php?page=afrsm-page-general-settings' => true,
+			'admin.php?page=afrsm-page-add-ons'          => true,
+			'admin.php?page=afrsm-pro-dashboard'         => true,
+			'admin.php?page=dots_store'                  => 'submenu',
+			//WooCommerce Product Options 2.6.2
+			'admin.php?page=woocommerce-product-options-setup-wizard'  => true,
+			//WooCommerce Quantity Manager 2.4.3
+			'admin.php?page=woocommerce-quantity-manager-setup-wizard' => true,
 		);
-
-		//AJAXify screen options
-		add_action('wp_ajax_ws_ame_save_screen_options', array($this,'ajax_save_screen_options'));
 
 		//AJAXify hints and warnings
 		add_action('wp_ajax_ws_ame_hide_hint', array($this, 'ajax_hide_hint'));
@@ -403,9 +438,10 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		//Grant virtual capabilities like "super_user" to users.
 		add_filter('user_has_cap', array($this, 'grant_virtual_caps_to_user'), 9, 3);
 		add_filter('user_has_cap', array($this, 'regrant_virtual_caps_to_user'), 200, 1);
+		add_filter('map_meta_cap', array($this, 'identity_map_meta_cap_for_user'), 200, 3);
 
 		//Update caches when the current user changes.
-		add_action('set_current_user', array($this, 'update_current_user_cache'), 1, 0); //Run before most plugins.
+		add_action('set_current_user', array($this, 'update_current_user_cache'), 2, 0); //Run before most plugins.
 		//Clear or refresh per-user caches when the user's roles or capabilities change.
 		add_action('updated_user_meta', array($this, 'on_user_metadata_changed'), 10, 3);
 		add_action('deleted_user_meta', array($this, 'on_user_metadata_changed'), 10, 3);
@@ -414,6 +450,18 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 		//Multisite: Clear role and capability caches when switching to another site.
 		add_action('switch_blog', array($this, 'clear_site_specific_caches'), 10, 0);
+
+		$this->menu_structure_feature = new ameCustomizationFeatureToggle(
+			self::ADMIN_MENU_STRUCTURE_COMPONENT,
+			$this,
+			'editor',
+			function () {
+				return [
+					__('You will still see the default admin menu content.', 'admin-menu-editor'),
+					__('Custom admin menu is disabled for your account.', 'admin-menu-editor'),
+				];
+			}
+		);
 
 		//"Test Access" feature.
 		if ( (defined('DOING_AJAX') && DOING_AJAX) || isset($this->get['ame-test-menu-access-as']) ) {
@@ -490,18 +538,19 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	}
 
 	public function load_modules() {
-		//Prevent indirect recursion. This can happen if, for example, a module
-		//immediately tries to check user capabilities when it's loaded.
-		if ( $this->is_loading_modules ) {
-			return;
-		}
-		$this->is_loading_modules = true;
+		$this->module_loader_recursion_depth++;
 
 		//Load any active modules that haven't been loaded yet.
 		foreach($this->get_active_modules() as $id => $module) {
-			if ( array_key_exists($id, $this->loaded_modules) ) {
+			//Skip modules that are already loaded or are in the process of being loaded.
+			if (
+				array_key_exists($id, $this->loaded_modules)
+				|| !empty($this->module_load_state[$id])
+			) {
 				continue;
 			}
+
+			$this->module_load_state[$id] = self::MODULE_STATE_LOADING;
 
 			include ($module['path']);
 			if ( !empty($module['className']) ) {
@@ -510,20 +559,26 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			} else {
 				$this->loaded_modules[$id] = true;
 			}
-		}
-		$this->are_modules_loaded = true;
 
-		//Set up the tabs for the menu editor page. Many tabs are provided by modules.
-		$firstTabs = array('editor' => 'Admin Menu');
-		if ( is_network_admin() ) {
-			//TODO: This could be in extras.php
-			$firstTabs = array('network-admin-menu' => 'Network Admin Menu');
+			$this->module_load_state[$id] = self::MODULE_STATE_LOADED;
 		}
-		$this->tabs = apply_filters('admin_menu_editor-tabs', $firstTabs);
-		//The "Settings" tab is always last.
-		$this->tabs['settings'] = 'Settings';
 
-		$this->is_loading_modules = false;
+		//This final setup step should only run once, after all modules have been loaded.
+		if ( $this->module_loader_recursion_depth === 1 ) {
+			$this->are_modules_loaded = true;
+
+			//Set up the tabs for the menu editor page. Many tabs are provided by modules.
+			$firstTabs = array('editor' => 'Admin Menu');
+			if ( is_network_admin() ) {
+				//TODO: This could be in extras.php
+				$firstTabs = array('network-admin-menu' => 'Network Admin Menu');
+			}
+			$this->tabs = apply_filters('admin_menu_editor-tabs', $firstTabs);
+			//The "Settings" tab is always last.
+			$this->tabs['settings'] = 'Settings';
+		}
+
+		$this->module_loader_recursion_depth--;
 	}
 
 	/**
@@ -567,12 +622,6 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			add_action(current_filter(), array($this, 'hook_admin_menu'), $this->magic_hook_priority + 1);
 			$firstRunSkipped = true;
 			return;
-		}
-
-		//Menu reset (for emergencies). Executed by accessing http://example.com/wp-admin/?reset_admin_menu=1
-		$reset_requested = isset($this->get['reset_admin_menu']) && $this->get['reset_admin_menu'];
-		if ( $reset_requested && $this->current_user_can_edit_menu() ){
-			$this->set_custom_menu(null);
 		}
 
 		//The menu editor is only visible to users with the manage_options privilege.
@@ -623,15 +672,6 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 			//Experimental compatibility fix for Ultimate TinyMCE
 			add_action("admin_print_scripts-$page", array($this, 'remove_ultimate_tinymce_qtags'));
-
-			//Make a placeholder for our screen options (hacky)
-			$screen_hook_name = $page;
-			if ( is_network_admin() ) {
-				$screen_hook_name .= '-network';
-			}
-			if ( $this->current_tab === 'editor' ) {
-				add_meta_box("ws-ame-screen-options", "[AME placeholder]", '__return_false', $screen_hook_name);
-			}
 		}
 
 		//Compatibility fix for the WooCommerce order count bubble. Must be run before storing or processing $submenu.
@@ -659,7 +699,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		$this->item_templates = $templateBuilder->build(
 			$this->default_wp_menu,
 			$this->default_wp_submenu,
-			$this->menu_url_blacklist
+			$this->get_menu_url_black_list()
 		);
 
 		//Store the default order for later. It will be used when (re)inserting unused items into the menu.
@@ -671,7 +711,8 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 		//Is there a custom menu to use?
 		$custom_menu = $this->load_custom_menu();
-		if ( ($custom_menu !== null) && !empty($custom_menu['tree']) ){
+		$has_custom_menu = ($custom_menu !== null) && !empty($custom_menu['tree']);
+		if ( $has_custom_menu ) {
 			//Merge in data from the default menu
 			$custom_menu['tree'] = $this->menu_merge($custom_menu['tree']);
 
@@ -679,7 +720,12 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			$this->merged_custom_menu = $custom_menu;
 
 			do_action('admin_menu_editor-menu_merged', $this->merged_custom_menu);
+		}
 
+		if (
+			$has_custom_menu
+			&& !$this->menu_structure_feature->isCustomizationDisabled()
+		) {
 			//Convert our custom menu to the $menu + $submenu structure used by WP.
 			//Note: This method sets up multiple internal fields and may cause side-effects.
 			$this->user_cap_cache_enabled = true;
@@ -771,6 +817,21 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			10,
 			2
 		);
+	}
+
+	private $is_menu_url_blacklist_filtered = false;
+
+	private function get_menu_url_black_list() {
+		if ( !$this->is_menu_url_blacklist_filtered ) {
+			$this->is_menu_url_blacklist_filtered = true; //Set early in case or unexpected recursion.
+
+			//Let other plugins add their own blacklisted URLs.
+			$this->menu_url_blacklist = apply_filters(
+				'admin_menu_editor-menu_url_blacklist',
+				$this->menu_url_blacklist
+			);
+		}
+		return $this->menu_url_blacklist;
 	}
 
 	/**
@@ -927,37 +988,72 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		// phpcs:enable
 	}
 
-	public function register_safe_js_libraries() {
-		static $isDone = false;
-		if ( $isDone ) {
-			return;
+	public function get_safe_js_libraries() {
+		static $libraries = null;
+		if ( $libraries !== null ) {
+			return $libraries;
 		}
-		$isDone = true;
-
-		//Lodash library
-		wp_register_auto_versioned_script('ame-lodash', plugins_url('js/lodash4.min.js', $this->plugin_file));
-		//Make sure Lodash doesn't conflict with the copy of Underscore that's bundled with WordPress.
-		//Revert the "_" variable to its original value and store Lodash in "wsAmeLodash" instead.
-		wp_add_inline_script('ame-lodash', 'window.wsAmeLodash = _.noConflict();');
 
 		//Knockout
-		foreach(array('ame-knockout', 'knockout') as $koAlias) {
-			wp_register_auto_versioned_script($koAlias, plugins_url('js/knockout.js', $this->plugin_file));
-		}
-
-		//Knockout bindings for the jQuery UI sortable functionality.
-		wp_register_auto_versioned_script(
-			'ame-knockout-sortable',
-			plugins_url('js/knockout-sortable.js', $this->plugin_file),
-			['ame-knockout', 'jquery', 'jquery-ui-sortable', 'jquery-ui-draggable', 'jquery-ui-droppable']
+		$knockout = ScriptDependency::create(
+			plugins_url('js/knockout.js', $this->plugin_file),
+			'ame-knockout',
+			AME_ROOT_DIR . '/js/knockout.js'
 		);
 
-		//Mini utilities for more functional programming.
-		wp_register_auto_versioned_script('ame-mini-functional-lib', plugins_url('js/mini-func.js', $this->plugin_file));
+		$deps = [
+			$knockout,
 
-		if ( function_exists('ws_ame_register_customizable_js_lib') ) {
-			ws_ame_register_customizable_js_lib($this);
+			//Unaliased Knockout library for back-compat; should not be used.
+			ScriptDependency::create(
+				$knockout->getUrl(),
+				'knockout',
+				$knockout->getAbsoluteFilePath()
+			),
+
+			//Lodash library
+			ScriptDependency::create(
+				plugins_url('js/lodash4.min.js', $this->plugin_file),
+				'ame-lodash',
+				AME_ROOT_DIR . '/js/lodash4.min.js'
+			)
+				//Make sure Lodash doesn't conflict with the copy of Underscore that's bundled with WordPress.
+				//Revert the "_" variable to its original value and store Lodash in "wsAmeLodash" instead.
+				->addInlineScript('window.wsAmeLodash = _.noConflict();'),
+
+			//Knockout bindings for the jQuery UI sortable functionality.
+			ScriptDependency::create(
+				plugins_url('js/knockout-sortable.js', $this->plugin_file),
+				'ame-knockout-sortable',
+				AME_ROOT_DIR . '/js/knockout-sortable.js'
+			)
+				->addDependencies(
+					$knockout, 'jquery', 'jquery-ui-sortable',
+					'jquery-ui-draggable', 'jquery-ui-droppable'
+				),
+
+			//Miscellaneous Knockout extensions.
+			ScriptDependency::create(
+				plugins_url('js/free-ko-extensions.js', $this->plugin_file),
+				'ame-free-ko-extensions',
+				AME_ROOT_DIR . '/js/free-ko-extensions.js'
+			)
+				->addDependencies($knockout),
+
+			//Mini utilities for more functional programming.
+			ScriptDependency::create(
+				plugins_url('js/mini-func.js', $this->plugin_file),
+				'ame-mini-functional-lib',
+				AME_ROOT_DIR . '/js/mini-func.js'
+			),
+		];
+
+		$libraries = [];
+		foreach ($deps as $instance) {
+			$libraries[$instance->getHandle()] = $instance;
 		}
+
+		return $libraries;
 	}
 
 	public function register_base_dependencies() {
@@ -967,80 +1063,124 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		}
 		$done = true;
 
-		$this->register_jquery_plugins();
-		$this->register_safe_js_libraries();
+		foreach($this->get_base_dependencies() as $dependency) {
+			$dependency->register();
+		}
 
 		//Base styles.
 		wp_register_auto_versioned_style('menu-editor-base-style', plugins_url('css/menu-editor.css', $this->plugin_file));
 
-		//Actor manager.
-		wp_register_auto_versioned_script(
-			'ame-actor-manager',
-			plugins_url('js/actor-manager.js', $this->plugin_file),
-			array('ame-lodash')
-		);
-
-		$roles = array();
-
-		$wp_roles = ameRoleUtils::get_roles();
-		foreach($wp_roles->roles as $role_id => $role) {
-			//There is at least one plugin that creates a custom role without a "capabilities" key.
-			//We need to check for that to avoid an "undefined array key" warning.
-			if ( array_key_exists('capabilities', $role) ) {
-				//Some plugins use 1, 0, null, or other truthy/falsy values for capability settings.
-				//AME uses booleans. It helps avoid bugs and it's also what WordPress core does.
-				$role['capabilities'] = $this->castValuesToBool($role['capabilities']);
-			} else {
-				$role['capabilities'] = array();
-			}
-			$roles[$role_id] = $role;
+		if ( function_exists('ws_ame_register_customizable_js_lib') ) {
+			ws_ame_register_customizable_js_lib($this);
 		}
-
-		//Known users.
-		$users = array();
-		$current_user = wp_get_current_user();
-		$logins_to_include = apply_filters('admin_menu_editor-users_to_load', array());
-
-		//Always include the current user.
-		$logins_to_include[] = $current_user->get('user_login');
-		$logins_to_include = array_unique($logins_to_include);
-
-		//Load user details.
-		foreach($logins_to_include as $login) {
-			$user = get_user_by('login', $login);
-			if ( !empty($user) ) {
-				$users[$login] = $this->user_to_property_map($user);
-			}
-		}
-
-		//Compatibility workaround: Get the real roles of the current user even if other plugins corrupt the list.
-		$users[$current_user->get('user_login')]['roles'] = array_values($this->get_user_roles($current_user));
-
-		$suspected_meta_caps = $this->detect_meta_caps($roles, $users);
-
-		//The current user has all of the meta caps. That's how we know they're meta caps and not just regular
-		//capabilities that simply haven't been granted to anyone.
-		$users[$current_user->get('user_login')]['meta_capabilities'] = $suspected_meta_caps;
-
-		//TODO: Include currentUserLogin
-		$actor_data = array(
-			'roles' => $roles,
-			'users' => $users,
-			'isMultisite' => is_multisite(),
-			'capPower' => $this->load_cap_power(),
-			'suspectedMetaCaps' => $suspected_meta_caps,
-		);
-		wp_localize_script('ame-actor-manager', 'wsAmeActorData', $actor_data);
-
-		//Modules
-		wp_register_auto_versioned_script(
-			'ame-access-editor',
-			plugins_url('modules/access-editor/access-editor.js', $this->plugin_file),
-			array('jquery', 'ame-lodash')
-		);
 
 		//Let extras register their scripts.
 		do_action('admin_menu_editor-register_scripts', $this);
+	}
+
+	/**
+	 * @return ameBaseScriptDependencies
+	 */
+	public function get_base_dependencies(): ameBaseScriptDependencies {
+		static $deps = null;
+		if ( $deps !== null ) {
+			return $deps;
+		}
+
+		$deps = array_merge(
+			$this->get_jquery_plugins(),
+			$this->get_safe_js_libraries()
+		);
+
+		//Access editor module.
+		$accessEditor = ScriptDependency::create(
+			plugins_url('modules/access-editor/access-editor.js', $this->plugin_file),
+			'ame-access-editor',
+			AME_ROOT_DIR . '/modules/access-editor/access-editor.js'
+		)
+			->addDependencies('jquery', $deps['ame-lodash']);
+		$deps[$accessEditor->getHandle()] = $accessEditor;
+
+		//Actor manager.
+		$actorManager = ScriptDependency::create(
+			plugins_url('js/actor-manager.js', $this->plugin_file),
+			'ame-actor-manager',
+			AME_ROOT_DIR . '/js/actor-manager.js'
+		)
+			->addDependencies($deps['ame-lodash']);
+		$deps[$actorManager->getHandle()] = $actorManager;
+
+		$actorManager->addLazyJsVariable(
+			'wsAmeActorData',
+			function () {
+				$roles = array();
+
+				$wp_roles = ameRoleUtils::get_roles();
+				foreach ($wp_roles->roles as $role_id => $role) {
+					//There is at least one plugin that creates a custom role without a "capabilities" key.
+					//We need to check for that to avoid an "undefined array key" warning.
+					if ( array_key_exists('capabilities', $role) ) {
+						//Some plugins use 1, 0, null, or other truthy/falsy values for capability settings.
+						//AME uses booleans. It helps avoid bugs and it's also what WordPress core does.
+						$role['capabilities'] = $this->castValuesToBool($role['capabilities']);
+					} else {
+						$role['capabilities'] = array();
+					}
+					$roles[$role_id] = $role;
+				}
+
+				//Known users.
+				$users = array();
+				$current_user = wp_get_current_user();
+				$logins_to_include = apply_filters('admin_menu_editor-users_to_load', array());
+
+				//Always include the current user.
+				$logins_to_include[] = $current_user->get('user_login');
+				$logins_to_include = array_unique($logins_to_include);
+
+				//Load user details.
+				foreach ($logins_to_include as $login) {
+					$user = get_user_by('login', $login);
+					if ( !empty($user) ) {
+						$users[$login] = $this->user_to_property_map($user);
+					}
+				}
+
+				//Compatibility workaround: Get the real roles of the current user even if other plugins corrupt the list.
+				$users[$current_user->get('user_login')]['roles'] = array_values($this->get_user_roles($current_user));
+
+				$suspected_meta_caps = $this->detect_meta_caps($roles, $users);
+
+				//The current user has all of the meta caps. That's how we know they're meta caps and not just regular
+				//capabilities that simply haven't been granted to anyone.
+				$users[$current_user->get('user_login')]['meta_capabilities'] = $suspected_meta_caps;
+
+				//TODO: Include currentUserLogin
+				return array(
+					'roles'             => $roles,
+					'users'             => $users,
+					'isMultisite'       => is_multisite(),
+					'capPower'          => $this->load_cap_power(),
+					'suspectedMetaCaps' => $suspected_meta_caps,
+				);
+			}
+		);
+
+		//Settings page utilities and fixes.
+		//This is a separate script because some of it has to run after common.js, which is loaded in the page footer.
+		$settingsPageUtils = ScriptDependency::create(
+			plugins_url('js/settings-page-utils.js', $this->plugin_file),
+			'ame-settings-page-utils',
+			AME_ROOT_DIR . '/js/settings-page-utils.js'
+		)
+			->addDependencies('jquery', $deps['ame-lodash'], 'common')
+			->setInFooter();
+		$deps[$settingsPageUtils->getHandle()] = $settingsPageUtils;
+
+		$deps = apply_filters('admin_menu_editor-base_scripts', $deps);
+		$deps = new ameBaseScriptDependencies($deps);
+
+		return $deps;
 	}
 
 	/**
@@ -1052,18 +1192,28 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			$handles = array_keys(self::$jquery_plugins);
 		}
 
+		$plugins = $this->get_jquery_plugins();
 		foreach ($handles as $handle) {
-			if ( !isset(self::$jquery_plugins[$handle]) || !empty($this->registered_jquery_plugins[$handle]) ) {
-				continue;
+			if ( isset($plugins[$handle]) ) {
+				$plugins[$handle]->register();
 			}
-
-			wp_register_auto_versioned_script(
-				$handle,
-				plugins_url(self::$jquery_plugins[$handle], $this->plugin_file),
-				array('jquery')
-			);
-			$this->registered_jquery_plugins[$handle] = true;
 		}
+	}
+
+	private function get_jquery_plugins() {
+		if ( empty($this->jquery_plugin_instances) && !empty(self::$jquery_plugins) ) {
+			foreach (self::$jquery_plugins as $handle => $relativePath) {
+				$dependency = ScriptDependency::create(
+					plugins_url($relativePath, $this->plugin_file),
+					$handle,
+					AME_ROOT_DIR . '/' . $relativePath
+				);
+				$dependency->addDependencies('jquery');
+
+				$this->jquery_plugin_instances[$handle] = $dependency;
+			}
+		}
+		return $this->jquery_plugin_instances;
 	}
 
 	/**
@@ -1072,7 +1222,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 *
 	 * @param array $roles
 	 * @param array $users
-	 * @return array [capability => true]
+	 * @return array [capability => string[]]
 	 */
 	private function detect_meta_caps($roles, $users) {
 		if ( !$this->current_user_can_edit_menu() || !is_super_admin() ) {
@@ -1102,7 +1252,29 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		//that's probably a non-meta cap that isn't enabled for *anyone*.
 		$suspectedMetaCaps = array_filter(array_keys($suspectedMetaCaps), 'current_user_can');
 
-		return array_fill_keys($suspectedMetaCaps, true);
+		//Attempt to map meta caps to real capabilities.
+		$result = [];
+		$currentUserId = get_current_user_id();
+		foreach ($suspectedMetaCaps as $metaCap) {
+			$caps = map_meta_cap($metaCap, $currentUserId);
+			if ( is_array($caps) ) {
+				//Discard the "do_not_allow" cap and the meta cap itself (the latter matters
+				//for "view_site_health_checks" which is granted via a different filter).
+				$caps = array_filter($caps, function ($cap) use ($metaCap) {
+					return ($cap !== 'do_not_allow') && ($cap !== $metaCap);
+				});
+
+				//"view_site_health_checks" is essentially a meta cap, but it's granted via
+				//the "user_has_cap" filter, so it doesn't show up in the "map_meta_cap()" results.
+				/** @see wp_maybe_grant_site_health_caps() */
+				if ( empty($caps) && ($metaCap === 'view_site_health_checks') && !is_multisite() ) {
+					$caps = ['install_plugins'];
+				}
+				$result[$metaCap] = $caps;
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -1176,14 +1348,9 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 		$this->register_base_dependencies();
 
-		//Tab utilities and fixes.
-		//This is a separate script because some of it has to run after common.js, which is loaded in the page footer.
-		wp_enqueue_auto_versioned_script(
-			'ame-settings-tab-utils',
-			plugins_url('js/tab-utils.js', $this->plugin_file),
-			array('jquery', 'ame-lodash', 'common'),
-			true
-		);
+		//Settings page utilities.
+		//This is enqueued separately because some of it has to run in the footer, after common.js.
+		wp_enqueue_script('ame-settings-page-utils');
 
 		//Editor's scripts
 		$editor_dependencies = array(
@@ -1246,11 +1413,10 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		$script_data = array(
 			'imagesUrl' => plugins_url('images', $this->plugin_file),
 			'adminAjaxUrl' => admin_url('admin-ajax.php'),
-			'hideAdvancedSettings' => (boolean)$this->options['hide_advanced_settings'],
+			'hideAdvancedSettings' => (bool)$this->options['hide_advanced_settings'],
 			'showExtraIcons' => true, //No longer used.
 			'submenuIconsEnabled' => $this->options['submenu_icons_enabled'],
 
-			'hideAdvancedSettingsNonce' => wp_create_nonce('ws_ame_save_screen_options'),
 			'dashiconsAvailable' => wp_style_is('dashicons', 'registered'),
 			'captionShowAdvanced' => 'Show advanced options',
 			'captionHideAdvanced' => 'Hide advanced options',
@@ -1405,6 +1571,11 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	function enqueue_styles(){
 		wp_enqueue_auto_versioned_style('jquery-qtip-syle', plugins_url('css/jquery.qtip.min.css', $this->plugin_file));
 
+		//Register 'menu-editor-base-style', which is a dependency of all colour schemes.
+		//We need this call here and not just in enqueue_scripts() because "admin_print_styles-$page"
+		//runs before "admin_print_scripts-$page".
+		$this->register_base_dependencies();
+
 		wp_register_auto_versioned_style(
 			'menu-editor-colours-classic',
 			plugins_url('css/style-classic.css', $this->plugin_file),
@@ -1461,7 +1632,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		if ( !empty($custom_menu) ) {
 			$custom_menu['prebuilt_virtual_caps'] = $this->build_virtual_capability_list($custom_menu);
 
-			if ( $this->options['compress_custom_menu'] ) {
+			if ( $this->options['optimize_custom_menu_size'] ) {
 				$custom_menu = ameMenu::compress($custom_menu);
 			}
 
@@ -1510,7 +1681,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			return $this->cached_custom_menu;
 		}
 
-		//Modules may include custom hooks that change how menu settings are loaded, so we need to load active modules
+		//Modules can register custom hooks that change how menu settings are loaded, so we need to load active modules
 		//before we load the menu configuration. Usually that happens automatically, but there are some plugins that
 		//trigger AME filters that need menu data before modules would normally be loaded.
 		if ( !$this->are_modules_loaded ) {
@@ -1856,7 +2027,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		$tree = ameMenu::remove_missing_items($tree);
 		//TODO: What would happen if we kept missing items?
 
-		//Lets merge in the unused items.
+		//Let's merge in the unused items.
 		$max_menu_position = !empty($positions_by_template) ? max($positions_by_template) : 100;
 		$new_grant_access = $this->get_new_menu_grant_access();
 		foreach ($this->item_templates as $template_id => $template){
@@ -1871,7 +2042,13 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			$entry['defaults'] = $template['defaults'];
 			$entry['unused'] = true; //Note that this item is unused
 
-			$entry['grant_access'] = $new_grant_access;
+			//Set new item permissions.
+			//Exception: The top-level "Profile" menu that only exists for non-admin users shouldn't be
+			//hidden. It gets flagged as new/unused because it doesn't exist for admin users (they have
+			//"Users -> Profile" instead).
+			if ( $template_id !== '>profile.php' ) {
+				$entry['grant_access'] = $new_grant_access;
+			}
 
 			if ($this->options['unused_item_position'] === 'relative') {
 
@@ -2201,6 +2378,11 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			//Skip missing and hidden items
 			if ( !empty($item['missing']) || !empty($item['hidden']) ) {
 				continue;
+				//Note: Cosmetically hiding the top-level "Profile" menu that non-admin users see
+				//doesn't work. The special case we have for that in ameMenuItem::template_id()
+				//handles the usually-invisible submenu item "Profile -> Profile", not the top-level
+				//"Profile" menu. That works for access /control because they have the same URL, but
+				//not for other settings like cosmetic hiding or custom icons.
 			}
 
 			//Keep track of which menus have items with icons. Ignore hidden items.
@@ -2875,7 +3057,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 					}
 				}
 
-				wp_redirect( add_query_arg($query, $url) );
+				wp_safe_redirect( add_query_arg($query, $url) );
 				die();
 			} else {
 				$message = "Failed to save the menu. ";
@@ -2987,6 +3169,9 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			//Whether to delete settings associated with roles/users that no longer exist.
 			$this->options['delete_orphan_actor_settings'] = !empty($this->post['delete_orphan_actor_settings']);
 
+			//Menu size optimization.
+			$this->options['optimize_custom_menu_size'] = !empty($this->post['optimize_custom_menu_size']);
+
 			//Menu data compression.
 			$this->options['compress_custom_menu'] = !empty($this->post['compress_custom_menu']);
 
@@ -3007,8 +3192,10 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 				$activeModules
 			);
 
+			do_action('admin_menu_editor-settings_changed', $this->post);
+
 			$this->save_options();
-			wp_redirect(add_query_arg('message', 1, $this->get_settings_page_url()));
+			wp_safe_redirect(add_query_arg('message', 1, $this->get_settings_page_url()));
 			exit;
 		}
 	}
@@ -3127,7 +3314,11 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 * @return array
 	 */
 	private function get_default_menu() {
-		$default_tree = ameMenu::wp2tree($this->default_wp_menu, $this->default_wp_submenu, $this->menu_url_blacklist);
+		$default_tree = ameMenu::wp2tree(
+			$this->default_wp_menu,
+			$this->default_wp_submenu,
+			$this->get_menu_url_black_list()
+		);
 		try {
 			$default_menu = ameMenu::load_array($default_tree);
 		} catch (InvalidMenuException $e) {
@@ -3160,8 +3351,10 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	/**
 	 * Display the header of the "Menu Editor" page.
 	 * This includes the page heading and tab list.
+	 *
+	 * @param array $extra_wrap_classes Additional CSS classes to add to the page wrapper.
 	 */
-	public function display_settings_page_header() {
+	public function display_settings_page_header($extra_wrap_classes = []) {
 		$wrap_classes = array('wrap');
 		if ( $this->is_pro_version() ) {
 			$wrap_classes[] = 'ame-is-pro-version';
@@ -3171,22 +3364,46 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		if ( isset($GLOBALS['wp_version']) && version_compare($GLOBALS['wp_version'], '5.3-RC1', '>=') ) {
 			$wrap_classes[] = 'ame-is-wp53-plus';
 		}
+		$wrap_classes[] = 'ame-condensed-tabs-enabled';
+
+		//This method is also an action callback, and the default argument for actions is an empty string.
+		if ( !is_array($extra_wrap_classes) ) {
+			$extra_wrap_classes = [];
+		}
+		$wrap_classes = array_merge($wrap_classes, $extra_wrap_classes);
 
 		echo '<div class="', esc_attr(implode(' ', $wrap_classes)), '">';
 		printf(
-			'<%1$s id="ws_ame_editor_heading">%2$s</%1$s>',
+			'<%1$s id="ws_ame_editor_heading" style="visibility: hidden">%2$s</%1$s>',
 			//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Should only ever be "h1" or "h2".
 			self::$admin_heading_tag,
-			esc_html(apply_filters('admin_menu_editor-self_page_title', 'Menu Editor'))
+			esc_html($this->get_settings_page_heading_text())
 		);
 
 		do_action('admin_menu_editor-display_tabs');
 
+		$saved = false;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Just showing a "settings saved" notice.
 		if ( isset($_GET['message']) && (intval($_GET['message']) === 1) ) {
 			add_settings_error('ame-settings-page', 'settings_updated', __('Settings saved.'), 'updated');
+			$saved = true;
 		}
 		settings_errors('ame-settings-page');
+
+		if ( $saved && ($this->current_tab === 'editor') ) {
+			$this->menu_structure_feature->onSettingsSaved();
+		}
+
+		if ( !empty($this->current_tab) ) {
+			do_action('admin_menu_editor-tab_admin_notices-' . $this->current_tab);
+		}
+	}
+
+	private function get_settings_page_heading_text() {
+		return apply_filters(
+			'admin_menu_editor-self_page_title',
+			'Menu Editor'
+		);
 	}
 
 	public function display_settings_page_footer() {
@@ -3197,7 +3414,13 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 * Display the tabs for the settings page.
 	 */
 	public function display_editor_tabs() {
-		echo '<h2 class="nav-tab-wrapper ws-ame-nav-tab-list">';
+		echo '<h2 class="nav-tab-wrapper ws-ame-nav-tab-list" style="visibility: hidden">';
+
+		printf(
+			'<span id="ws_ame_tab_leader_heading">%s</span>',
+			esc_html($this->get_settings_page_heading_text())
+		);
+
 		foreach($this->tabs as $slug => $title) {
 			printf(
 				'<a href="%s" id="%s" class="nav-tab%s">%s</a>',
@@ -3315,6 +3538,10 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			return array();
 		}
 		if ( $custom_menu === null ){
+			return array();
+		}
+
+		if ( $this->menu_structure_feature->isCustomizationDisabled() ) {
 			return array();
 		}
 
@@ -3448,28 +3675,6 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			$this->cached_custom_menu = null;
 			$this->loaded_menu_config_id = null;
 		}
-	}
-
-	/**
-	 * AJAX callback for saving screen options (whether to show or to hide advanced menu options).
-	 *
-	 * Handles the 'ws_ame_save_screen_options' action. The new option value
-	 * is read from $_POST['hide_advanced_settings'].
-	 *
-	 * @return void
-	 */
-	function ajax_save_screen_options(){
-		if (!$this->current_user_can_edit_menu() || !check_ajax_referer('ws_ame_save_screen_options', false, false)){
-			//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Outputs JSON, not HTML.
-			die( $this->json_encode( array(
-				'error' => "You're not allowed to do that!"
-			 )));
-		}
-
-		$this->options['hide_advanced_settings'] = !empty($this->post['hide_advanced_settings']);
-		$this->options['show_extra_icons'] = !empty($this->post['show_extra_icons']);
-		$this->save_options();
-		die('1');
 	}
 
 	public function ajax_hide_hint() {
@@ -3692,7 +3897,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 * @uses self::$reverse_item_lookup
 	 * @return array|null Menu item in the internal format, or NULL if no matching item can be found.
 	 */
-	private function get_current_menu_item() {
+	public function get_current_menu_item() {
 		if ( !is_admin() || empty($this->reverse_item_lookup)) {
 			if ( !is_admin() ) {
 				$this->log_security_note('This is not an admin page. is_admin() returns false.');
@@ -3751,6 +3956,23 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			}
 		}
 
+		//Special case: Hook-based plugin pages should only match items that have the same "page" parameter.
+		//WP uses this parameter to construct the hook name, so an item without a matching value won't be
+		//the same admin page.
+		//This is particularly important for blacklisted hidden items since they often have a valid hook,
+		//but they're not included in the admin menu, so there's no true best match. If we treat the "page"
+		//parameter as optional, we might pick some unrelated item that just happens to have the same path.
+		$page_param_required = false;
+		//Is the "page" parameter set and being used by WordPress?
+		global $plugin_page;
+		if ( !empty($plugin_page) && !empty($current_url['params']['page']) ) {
+			//Does it have a hook attached?
+			$hook_name = get_plugin_page_hookname($plugin_page, get_admin_page_parent());
+			if ( $hook_name && (has_action($hook_name) !== false) ) {
+				$page_param_required = true;
+			}
+		}
+
 		foreach($this->reverse_item_lookup as $url => $item) {
 			$item_url = $url;
 			//Convert to absolute URL. Caution: directory traversal (../, etc) is not handled.
@@ -3789,7 +4011,17 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 				}
 			}
 
-			//Special case: In WP 4.0+ the URL of the "Customize" menu changes often due to a "return" query parameter
+			//Special case: Must match the "page" parameter if required.
+			if ( $is_close_match && $page_param_required ) {
+				if (
+					empty($item_url['params']['page'])
+					|| ($item_url['params']['page'] !== $current_url['params']['page'])
+				) {
+					$is_close_match = false;
+				}
+			}
+
+			//Special case: In WP 4.0+ the URL of the "Customize" menu often changes due to a "return" query parameter
 			//that contains the current page URL. To reliably recognize this item, we should ignore that parameter.
 			if ( $this->endsWith($item_url['path'], 'customize.php') ) {
 				unset($item_url['params']['return']);
@@ -3822,7 +4054,7 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		}
 
 		//Special case for CPTs: When the "Add New" menu is disabled by CPT settings (show_ui, etc), and someone goes
-		//to add a new item, WordPress highlights the "$CPT-Name" item as the current one. Lets do the same for
+		//to add a new item, WordPress highlights the "$CPT-Name" item as the current one. Let's do the same for
 		//consistency. See also: /wp-admin/post-new.php, lines #20 to #40.
 		if (
 			($best_item === null)
@@ -3971,6 +4203,17 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			return false;
 		}
 		return substr_compare($string, $suffix, $inputLen - $len) === 0;
+	}
+
+	public function get_menu_item_by_url($url) {
+		if ( isset($this->reverse_item_lookup[$url]) ) {
+			return $this->reverse_item_lookup[$url];
+		}
+		return null;
+	}
+
+	public function can_find_items_by_url() {
+		return !empty($this->reverse_item_lookup);
 	}
 
 	public function castValuesToBool($capabilities) {
@@ -4667,21 +4910,25 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 			return $capabilities;
 		}
 
+		//Compatibility fix for ActivityPub 7.8.5.
+		//ActivityPub incorrectly returns false from its "user_has_cap" filter when checking
+		//for the 'edit_post' capability at least in some situations.
+		if ( !is_array($capabilities) ) {
+			return $capabilities;
+		}
+
 		//The second entry of the $args array should be the user ID
 		if ( count($args) < 2 ) {
 			return $capabilities;
 		}
 		$user_id = intval($args[1]);
 
-		if ( !isset($this->cached_virtual_user_caps[$user_id]) ) {
-			$this->update_virtual_cap_cache($this->get_user_by_id($user_id));
-		}
-
-		if ( empty($this->cached_virtual_user_caps[$user_id][$this->virtual_cap_mode]) ) {
+		$caps_for_user = $this->get_virtual_caps_for_user($user_id);
+		if ( empty($caps_for_user) ) {
 			return $capabilities;
 		}
 
-		$this->virtual_caps_for_this_call = $this->cached_virtual_user_caps[$user_id][$this->virtual_cap_mode];
+		$this->virtual_caps_for_this_call = $caps_for_user;
 
 		$capabilities = array_merge($capabilities, $this->virtual_caps_for_this_call);
 		return $capabilities;
@@ -4698,11 +4945,110 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	 * @return array
 	 */
 	public function regrant_virtual_caps_to_user($capabilities) {
+		//Compatibility fix for ActivityPub.
+		if ( !is_array($capabilities) ) {
+			return $capabilities;
+		}
+
 		if ( !empty($this->virtual_caps_for_this_call) ) {
 			$capabilities = array_merge($capabilities, $this->virtual_caps_for_this_call);
 			$this->virtual_caps_for_this_call = array();
 		}
 		return $capabilities;
+	}
+
+	private function get_virtual_caps_for_user($userId) {
+		if ( !isset($this->cached_virtual_user_caps[$userId]) ) {
+			$this->update_virtual_cap_cache($this->get_user_by_id($userId));
+		}
+
+		if ( empty($this->cached_virtual_user_caps[$userId][$this->virtual_cap_mode]) ) {
+			return [];
+		}
+
+		return $this->cached_virtual_user_caps[$userId][$this->virtual_cap_mode];
+	}
+
+	private $cached_identity_mapped_caps = null;
+
+	/**
+	 * Map selected meta caps to themselves so that they can be enabled by our "user_has_cap" filter.
+	 *
+	 * The "virtual capabilities" mechanism enables/disables certain capabilities for a user. That
+	 * doesn't work for meta capabilities because they're mapped to other, primitive capabilities
+	 * before they're checked. We can't reliably predict which primitive capabilities will be used,
+	 * especially for other plugins, so enabling the primitive caps is not always an option.
+	 *
+	 * Instead, we use the "map_meta_cap" filter to map only the relevant meta capabilities back to
+	 * themselves. This way, setting a meta cap in the "user_has_cap" filter will work as expected.
+	 *
+	 * @param string[]|mixed $primitiveCaps
+	 * @param string|mixed $requiredCap
+	 * @param int|mixed $userId
+	 * @return string[]
+	 */
+	public function identity_map_meta_cap_for_user($primitiveCaps, $requiredCap = '', $userId = 0) {
+		if ( $this->disable_virtual_caps ) {
+			return $primitiveCaps;
+		}
+
+		//Sanity checks.
+		$userId = intval($userId);
+		if ( ($userId <= 0) || !is_string($requiredCap) || !is_array($primitiveCaps) ) {
+			return $primitiveCaps;
+		}
+
+		//Is the cap set for the user?
+		$virtualCapsForUser = $this->get_virtual_caps_for_user($userId);
+		if ( empty($virtualCapsForUser) || !isset($virtualCapsForUser[$requiredCap]) ) {
+			return $primitiveCaps;
+		}
+
+		//map_meta_cap() is called a lot, so let's cache the capability list.
+		if ( $this->cached_identity_mapped_caps === null ) {
+			$custom_menu = $this->load_custom_menu();
+			if (
+				!empty($custom_menu)
+				&& !empty($custom_menu['suspected_meta_caps'])
+				&& !$this->menu_structure_feature->isCustomizationDisabled()
+			) {
+				$this->cached_identity_mapped_caps = array_fill_keys($custom_menu['suspected_meta_caps'], true);
+			} else {
+				$this->cached_identity_mapped_caps = [];
+			}
+
+			//Exclude dangerous Super User capabilities; don't remap them.
+			$dangerousSuperAdminCaps = [
+				'create_sites'           => true,
+				'delete_sites'           => true,
+				'manage_network'         => true,
+				'manage_sites'           => true,
+				'manage_network_users'   => true,
+				'manage_network_plugins' => true,
+				'manage_network_themes'  => true,
+				'manage_network_options' => true,
+				'upgrade_network'        => true,
+				'setup_network'          => true,
+				'update_php'             => true,
+				'update_https'           => true,
+			];
+			$this->cached_identity_mapped_caps = array_diff_key(
+				$this->cached_identity_mapped_caps,
+				$dangerousSuperAdminCaps
+			);
+		}
+
+		if ( !empty($this->cached_identity_mapped_caps[$requiredCap]) ) {
+			//Just to be safe, let's not override "do_not_allow" results.
+			if ( ($requiredCap === 'do_not_allow') || in_array('do_not_allow', $primitiveCaps) ) {
+				return $primitiveCaps;
+			}
+
+			//Map the meta cap to itself.
+			return [$requiredCap];
+		}
+
+		return $primitiveCaps;
 	}
 
 	/**
@@ -4759,44 +5105,13 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 	/**
 	 * Get the user object based on a user ID.
 	 *
-	 * In most cases, when this plugin needs to retrieve a user, it is the current user. This method
-	 * attempts to make that common case faster.
+	 * Alias for ameRoleUtils::get_user_by_id().
 	 *
 	 * @param int $user_id
 	 * @return WP_User|null
 	 */
 	private function get_user_by_id($user_id) {
-		static $isGettingCurrentUser = false;
-
-		//Usually, pluggable functions will already be loaded by this point,
-		//but there is at least one plugin that indirectly triggers this method
-		//before wp_get_current_user() is available by checking user caps early.
-		//
-		//At least one plugin can enter infinite recursion if we call wp_get_current_user()
-		//here. To prevent that, avoid nested calls and fall back to get_user_by().
-		if ( function_exists('wp_get_current_user') && !$isGettingCurrentUser ) {
-			$isGettingCurrentUser = true;
-			try {
-				$current_user = wp_get_current_user();
-			} finally {
-				$isGettingCurrentUser = false;
-			}
-
-			if ( $current_user && ($current_user->ID == $user_id) ) {
-				return $current_user;
-			}
-		}
-
-		if ( function_exists('get_user_by') ) {
-			$user = get_user_by('id', $user_id);
-			if ( $user === false ) {
-				return null;
-			} else {
-				return $user;
-			}
-		}
-
-		return null;
+		return ameRoleUtils::get_user_by_id($user_id);
 	}
 
 	/**
@@ -4949,12 +5264,16 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 
 		$power_filename = AME_ROOT_DIR . '/includes/capabilities/cap-power.csv';
 		if ( is_file($power_filename) && is_readable($power_filename) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen -- Should be fine, we only need read permissions.
+			//phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Should be fine, we only need read permissions.
 			$csv = fopen($power_filename, 'r');
 			$firstLineSkipped = false;
 
+			//$escape should be an empty string since it's deprecated in modern PHP versions,
+			//but versions older than PHP 7.4 require it to be a character (i.e. non-empty string).
+			$escape = version_compare(phpversion(), '7.4', '>=') ? '' : '\\';
+
 			while ($csv && !feof($csv)) {
-				$line = fgetcsv($csv, 1000, ';');
+				$line = fgetcsv($csv, 1000, ';', '"', $escape);
 				if ( !$firstLineSkipped ) {
 					$firstLineSkipped = true;
 					continue;
@@ -5031,6 +5350,12 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 				'className' => '\\YahnisElsts\\AdminMenuEditor\\NavMenuVisibility\\NavMenuModule',
 				'title' => 'Navigation Menu Visibility',
 			),
+			'table-columns' => [
+				'relativePath'       => 'extras/modules/table-columns/table-columns.php',
+				'className'          => '\\YahnisElsts\\AdminMenuEditor\\TableColumns\\TableColumnsModule',
+				'title'              => 'Table Columns',
+				'requiredPhpVersion' => '5.6',
+			],
 			'redirector' => array(
 				'relativePath' => 'modules/redirector/redirector.php',
 				'className'    => '\\YahnisElsts\\AdminMenuEditor\\Redirects\\Module',
@@ -5069,12 +5394,24 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 				'requiredPhpVersion' => '5.6.20',
 				'requiredMethods' => array(array('WP_Error', 'merge_from')),
 			),
+			'quick-search' => [
+				'relativePath'       => 'extras/modules/quick-search/quick-search.php',
+				'className'          => '\\YahnisElsts\\AdminMenuEditor\\QuickSearch\\SearchModule',
+				'title'              => 'Quick Search',
+				'requiredPhpVersion' => '5.6.20',
+			],
 			'highlight-new-menus' => array(
 				'relativePath' => 'modules/highlight-new-menus/highlight-new-menus.php',
 				'className' => 'ameMenuHighlighterWrapper',
 				'title' => 'Highlight new menu items',
 				'requiredPhpVersion' => '5.3',
 			),
+			'content-permission' => [
+				'relativePath'       => 'modules/content-permissions/content-permissions.php',
+				'className'          => '\\YahnisElsts\\AdminMenuEditor\\ContentPermissions\\ContentPermissionsModule',
+				'title'              => 'Content Permissions',
+				'requiredPhpVersion' => '7.1.0', //This module indirectly uses is_iterable() via customizables.
+			],
 		);
 
 		foreach($modules as &$module) {
@@ -5331,6 +5668,46 @@ class WPMenuEditor extends MenuEd_ShadowPluginFramework {
 		return $this->webpack_registry;
 	}
 
+	/**
+	 * @var array<string,bool>
+	 */
+	private $customizations_disabled_state = [];
+
+	/**
+	 * Check if a specific customization is disabled for the current user.
+	 *
+	 * For example, disabling admin menu customizations means that the user will see the default,
+	 * unmodified admin menu. Customizations like hiding menu items, changing item order, and so on
+	 * will not be applied.
+	 *
+	 * Note that this does not, by itself, prevent the user from *editing* customization settings.
+	 * It only prevents the customizations from being applied. The user can still change AME settings
+	 * if they have the necessary permissions.
+	 *
+	 * @param string $component
+	 * @return bool
+	 */
+	public function is_customization_disabled($component) {
+		if ( empty($component) ) {
+			throw new InvalidArgumentException('Component name must not be empty.');
+		}
+
+		if ( isset($this->customizations_disabled_state[$component]) ) {
+			return $this->customizations_disabled_state[$component];
+		}
+
+		$disabled = (bool)apply_filters('admin_menu_editor-disable_customizations-' . $component, false);
+
+		//Usually, the state depends on the user and/or their role, so let's cache the result
+		//only if a user is logged in. This probably won't come up much in practice since
+		//current modules should only call this method after the logged-in user is known.
+		if ( function_exists('is_user_logged_in') && is_user_logged_in() ) {
+			$this->customizations_disabled_state[$component] = $disabled;
+		}
+
+		return $disabled;
+	}
+
 } //class
 
 
@@ -5429,7 +5806,7 @@ class ameMenuTemplateBuilder {
 			}
 		}
 
-		$name = $this->sanitizeMenuTitle($item['menu_title']);
+		$name = self::sanitizeMenuTitle($item['menu_title']);
 		if ( $parent === null ) {
 			$this->parentNames[$item['file']] = $name;
 		} else {
@@ -5461,7 +5838,7 @@ class ameMenuTemplateBuilder {
 	 * @param string $title
 	 * @return string
 	 */
-	private function sanitizeMenuTitle($title) {
+	public static function sanitizeMenuTitle($title) {
 		$title = wp_strip_all_tags( preg_replace('@<span[^>]*>.*</span>@i', '', $title) );
 
 		//Compact whitespace.

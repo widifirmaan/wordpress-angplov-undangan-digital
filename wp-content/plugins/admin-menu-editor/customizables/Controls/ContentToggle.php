@@ -3,6 +3,7 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 class ContentToggle extends ClassicControl {
@@ -13,8 +14,8 @@ class ContentToggle extends ClassicControl {
 	protected $visibleStateText = 'Hide details';
 	protected $hiddenStateText = 'Show details';
 
-	public function __construct($settings = array(), $params = array()) {
-		parent::__construct($settings, $params);
+	public function __construct($settings = array(), $params = array(), $children = []) {
+		parent::__construct($settings, $params, $children);
 
 		if ( isset($params['itemSelector']) ) {
 			$this->itemSelector = $params['itemSelector'];
@@ -37,7 +38,7 @@ class ContentToggle extends ClassicControl {
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
+	public function renderContent(Renderer $renderer, Context $context) {
 		echo HtmlHelper::tag(
 			'a',
 			array(

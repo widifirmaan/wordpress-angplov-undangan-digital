@@ -3,8 +3,6 @@
  * Loader Functions
  *
  * @package     Astra
- * @author      Astra
- * @copyright   Copyright (c) 2020, Astra
  * @link        https://wpastra.com/
  * @since       Astra 1.0.0
  */
@@ -22,20 +20,17 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 	 * Theme Enqueue Scripts
 	 */
 	class Astra_Enqueue_Scripts {
-
 		/**
 		 * Class styles.
 		 *
-		 * @access public
-		 * @var $styles Enqueued styles.
+		 * @var Enqueued $styles styles.
 		 */
 		public static $styles;
 
 		/**
 		 * Class scripts.
 		 *
-		 * @access public
-		 * @var $scripts Enqueued scripts.
+		 * @var Enqueued $scripts scripts.
 		 */
 		public static $scripts;
 
@@ -93,7 +88,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				$classes .= ' ast-highlight-wpblock-onhover';
 			}
 
-			if ( ( ( 'post-new.php' == $pagenow || 'post.php' == $pagenow ) && ( defined( 'ASTRA_ADVANCED_HOOKS_POST_TYPE' ) && ASTRA_ADVANCED_HOOKS_POST_TYPE == $screen->post_type ) ) || 'widgets.php' == $pagenow ) {
+			if ( ( 'post-new.php' === $pagenow || 'post.php' === $pagenow ) && ( defined( 'ASTRA_ADVANCED_HOOKS_POST_TYPE' ) && ASTRA_ADVANCED_HOOKS_POST_TYPE === $screen->post_type ) || 'widgets.php' === $pagenow ) {
 				return $classes;
 			}
 
@@ -128,15 +123,15 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 
 			$content_layout = astra_apply_boxed_layouts( $content_layout, $is_boxed, $is_sidebar_boxed, $post_id );
 
-			if ( 'content-boxed-container' == $content_layout ) {
+			if ( 'content-boxed-container' === $content_layout ) {
 				$classes .= ' ast-separate-container';
-			} elseif ( 'boxed-container' == $content_layout ) {
+			} elseif ( 'boxed-container' === $content_layout ) {
 				$classes .= ' ast-separate-container ast-two-container';
-			} elseif ( 'page-builder' == $content_layout ) {
+			} elseif ( 'page-builder' === $content_layout ) {
 				$classes .= ' ast-page-builder-template';
-			} elseif ( 'plain-container' == $content_layout ) {
+			} elseif ( 'plain-container' === $content_layout ) {
 				$classes .= ' ast-plain-container';
-			} elseif ( 'narrow-container' == $content_layout ) {
+			} elseif ( 'narrow-container' === $content_layout ) {
 				$classes .= ' ast-narrow-container';
 			}
 
@@ -194,7 +189,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				}
 
 				if ( ( class_exists( 'Easy_Digital_Downloads' ) && Astra_Builder_Helper::is_component_loaded( 'edd-cart', 'header' ) ) ||
-					( class_exists( 'WooCommerce' ) && Astra_Builder_Helper::is_component_loaded( 'woo-cart', 'header' ) ) ) {
+					( class_exists( 'WooCommerce' ) && Astra_Builder_Helper::is_component_loaded( 'woo-cart', 'header' ) && self::should_load_woocommerce_js() ) ) {
 					$default_assets['js']['astra-mobile-cart'] = 'mobile-cart';
 				}
 
@@ -204,7 +199,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 					$default_assets['js']['astra-live-search'] = 'live-search';
 				}
 
-				if ( class_exists( 'WooCommerce' ) ) {
+				if ( class_exists( 'WooCommerce' ) && self::should_load_woocommerce_js() ) {
 					if ( is_product() && astra_get_option( 'single-product-sticky-add-to-cart' ) ) {
 						$default_assets['js']['astra-sticky-add-to-cart'] = 'sticky-add-to-cart';
 					}
@@ -218,7 +213,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 
 					/** @psalm-suppress UndefinedFunction */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
 					$astra_add_to_cart_quantity_btn_enabled = apply_filters( 'astra_add_to_cart_quantity_btn_enabled', astra_get_option( 'single-product-plus-minus-button' ) );
-					if ( $astra_add_to_cart_quantity_btn_enabled ) {
+					if ( $astra_add_to_cart_quantity_btn_enabled && self::should_load_add_to_cart_quantity_btn_script() ) {
 						$default_assets['js']['astra-add-to-cart-quantity-btn'] = 'add-to-cart-quantity-btn';
 					}
 				}
@@ -253,6 +248,247 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 		}
 
 		/**
+		 * Check if WooCommerce JS assets should be loaded based on filter settings
+		 *
+		 * @return bool Whether WooCommerce JS should be loaded
+		 * @since 4.11.13
+		 */
+		public static function should_load_woocommerce_js() {
+			// Allow users to disable WooCommerce JS loading on specific pages/posts/post types.
+			return apply_filters( 'astra_load_woocommerce_js', true );
+		}
+
+		/**
+		 * Check if WooCommerce CSS assets should be loaded based on filter settings
+		 *
+		 * @return bool Whether WooCommerce CSS should be loaded
+		 * @since 4.11.13
+		 */
+		public static function should_load_woocommerce_css() {
+			// Allow users to disable WooCommerce CSS loading on specific pages/posts/post types.
+			return apply_filters( 'astra_load_woocommerce_css', true );
+		}
+
+		/**
+		 * Check if add to cart quantity button script should be loaded based on specific conditions
+		 *
+		 * @since 4.11.18
+		 *
+		 * @return bool Whether add to cart quantity button script should be loaded
+		 */
+		public static function should_load_add_to_cart_quantity_btn_script() {
+			// 1. Check if the Cart Widget is present in the header.
+			if ( self::has_cart_widget_in_header() ) {
+				return true;
+			}
+
+			// 2. Check for Product Block or Shortcode.
+			if ( self::has_product_block_or_shortcode() ) {
+				return true;
+			}
+
+			// 3. Check if we are on the Single Product or the Cart Page.
+			if ( is_product() || is_cart() || is_shop() ) {
+				return true;
+			}
+
+			// 4. Check with Elementor's product widget.
+			if ( self::has_elementor_product_widget() ) {
+				return true;
+			}
+
+			return false;
+		}
+
+		/**
+		 * Check if cart widget is present in header.
+		 *
+		 * @since 4.11.18
+		 *
+		 * @return bool
+		 */
+		public static function has_cart_widget_in_header() {
+			// Check if header footer builder is active.
+			if ( ! Astra_Builder_Helper::$is_header_footer_builder_active ) {
+				return false;
+			}
+
+			// Check if woo-cart component is loaded in header.
+			if ( class_exists( 'Astra_Builder_Helper' ) && Astra_Builder_Helper::is_component_loaded( 'woo-cart', 'header' ) ) {
+				return true;
+			}
+
+			// Check for legacy cart widget.
+			if ( is_active_widget( false, false, 'woocommerce_widget_cart', true ) ) {
+				return true;
+			}
+
+			return false;
+		}
+
+		/**
+		 * Check if page has product block or shortcode.
+		 *
+		 * @since 4.11.18
+		 *
+		 * @return bool
+		 */
+		public static function has_product_block_or_shortcode() {
+			// Check for WooCommerce blocks.
+			if ( function_exists( 'has_block' ) && (
+				has_block( 'woocommerce/product-collection' ) ||
+				has_block( 'woocommerce/all-products' ) ||
+				has_block( 'woocommerce/products' ) )
+			) {
+				return true;
+			}
+
+			// Check for product shortcodes in post content.
+			if ( is_singular() ) {
+				$post = get_post();
+				if ( $post ) {
+					// For single posts, check the post content directly.
+					return self::has_woocommerce_shortcode( $post->post_content );
+				}
+			}
+
+			if ( is_archive() || is_home() ) {
+				// For archive pages, check for shortcodes more efficiently.
+				// without loading all post content into memory.
+				return self::has_woocommerce_shortcode_in_archive();
+			}
+
+			return false;
+		}
+
+		/**
+		 * Check if content has WooCommerce shortcodes.
+		 *
+		 * @since 4.11.18
+		 *
+		 * @param string $content Post content to check.
+		 * @return bool
+		 */
+		private static function has_woocommerce_shortcode( $content ) {
+			// Check for common WooCommerce shortcodes.
+			$shortcodes = array(
+				'products',
+				'product_page',
+				'product_category',
+				'recent_products',
+				'sale_products',
+				'best_selling_products',
+				'top_rated_products',
+				'featured_products',
+				'product_attribute',
+			);
+
+			foreach ( $shortcodes as $shortcode ) {
+				if ( has_shortcode( $content, $shortcode ) ) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		/**
+		 * Check for WooCommerce shortcodes in archive pages efficiently.
+		 *
+		 * @since 4.11.18
+		 *
+		 * @return bool
+		 */
+		private static function has_woocommerce_shortcode_in_archive() {
+			// Access the global $wp_query variable in a Psalm-compliant way.
+			$wp_query = isset( $GLOBALS['wp_query'] ) ? $GLOBALS['wp_query'] : null;
+
+			// If no posts, return false early.
+			if ( ! $wp_query || empty( $wp_query->posts ) ) {
+				return false;
+			}
+
+			// Limit the number of posts to check to prevent memory issues.
+			$posts_to_check = array_slice( $wp_query->posts, 0, 5 ); // Check only first 5 posts.
+
+			// Check each post individually instead of concatenating all content.
+			foreach ( $posts_to_check as $post ) {
+				if ( ! $post ) {
+					continue; // Skip if post is empty.
+				}
+				if ( self::has_woocommerce_shortcode( $post->post_content ) ) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		/**
+		 * Check if page has Elementor product widget.
+		 *
+		 * @since 4.11.18
+		 *
+		 * @return bool
+		 */
+		public static function has_elementor_product_widget() {
+			// Check if Elementor is active.
+			if ( ! defined( 'ELEMENTOR_VERSION' ) ) {
+				return false;
+			}
+
+			// Check if we're on a page that might have Elementor product widgets.
+			if ( ! is_singular() ) {
+				return false;
+			}
+
+			// Check for Elementor data with product-related widgets.
+			$post_id = get_the_ID();
+			if ( ! $post_id ) {
+				return false;
+			}
+
+			// Check if post is built with Elementor.
+			if ( ! get_post_meta( $post_id, '_elementor_version', true ) ) {
+				return false;
+			}
+
+			// Get Elementor data.
+			$elementor_data = get_post_meta( $post_id, '_elementor_data', true );
+			if ( ! $elementor_data || ! is_string( $elementor_data ) ) {
+				return false;
+			}
+
+			// Check for WooCommerce-related Elementor widgets.
+			$woo_widgets = array(
+				'woocommerce-menu-cart',
+				'woocommerce-product-images',
+				'woocommerce-product-meta',
+				'woocommerce-product-price',
+				'woocommerce-product-rating',
+				'woocommerce-product-short-description',
+				'woocommerce-product-stock',
+				'woocommerce-product-tabs',
+				'woocommerce-product-title',
+				'woocommerce-product-additional-information',
+				'woocommerce-product-data-tabs',
+				'woocommerce-products',
+				'woocommerce-categories',
+				'wc-archive-products',
+				'wc-single-product',
+			);
+
+			// Check if any WooCommerce widgets exist in Elementor data.
+			foreach ( $woo_widgets as $widget ) {
+				if ( strpos( $elementor_data, $widget ) !== false ) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		/**
 		 * Enqueue Scripts
 		 */
 		public function enqueue_scripts() {
@@ -262,8 +498,8 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 			}
 
 			/* Directory and Extension */
-			$file_prefix = ( SCRIPT_DEBUG ) ? '' : '.min';
-			$dir_name    = ( SCRIPT_DEBUG ) ? 'unminified' : 'minified';
+			$file_prefix = SCRIPT_DEBUG ? '' : '.min';
+			$dir_name    = SCRIPT_DEBUG ? 'unminified' : 'minified';
 
 			$js_uri  = ASTRA_THEME_URI . 'assets/js/' . $dir_name . '/';
 			$css_uri = ASTRA_THEME_URI . 'assets/css/minified/';
@@ -273,8 +509,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 			 */
 			// Flexibility.js for flexbox IE10 support.
 			wp_enqueue_script( 'astra-flexibility', $js_uri . 'flexibility' . $file_prefix . '.js', array(), ASTRA_THEME_VERSION, false );
-			wp_add_inline_script( 'astra-flexibility', 'flexibility(document.documentElement);' );
-			wp_script_add_data( 'astra-flexibility', 'conditional', 'IE' );
+			wp_add_inline_script( 'astra-flexibility', 'typeof flexibility !== "undefined" && flexibility(document.documentElement);' );
 
 			// Polyfill for CustomEvent for IE.
 			wp_register_script( 'astra-customevent', $js_uri . 'custom-events-polyfill' . $file_prefix . '.js', array(), ASTRA_THEME_VERSION, false );
@@ -337,7 +572,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				}
 			}
 
-			$rtl = ( is_rtl() ) ? '-rtl' : '';
+			$rtl = is_rtl() ? '-rtl' : '';
 
 			if ( ! empty( $menu_animation ) || is_customize_preview() ) {
 				if ( class_exists( 'Astra_Cache' ) ) {
@@ -367,8 +602,14 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				// Register & Enqueue Scripts.
 				foreach ( $scripts as $key => $script ) {
 
+					// Set dependencies based on script type.
+					$dependencies = array();
+					if ( 'astra-mobile-cart' === $key && class_exists( 'WooCommerce' ) ) {
+						$dependencies = array( 'jquery', 'wc-add-to-cart' );
+					}
+
 					// Register.
-					wp_register_script( $key, $js_uri . $script . $file_prefix . '.js', array(), ASTRA_THEME_VERSION, true );
+					wp_register_script( $key, $js_uri . $script . $file_prefix . '.js', $dependencies, ASTRA_THEME_VERSION, true );
 
 					// Enqueue.
 					wp_enqueue_script( $key );
@@ -376,7 +617,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 			}
 
 			/** @psalm-suppress UndefinedClass */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
-			$quantity_type = ( defined( 'ASTRA_EXT_VER' ) && Astra_Ext_Extension::is_active( 'woocommerce' ) ) ? astra_get_option( 'cart-plus-minus-button-type' ) : 'normal';
+			$quantity_type = defined( 'ASTRA_EXT_VER' ) && Astra_Ext_Extension::is_active( 'woocommerce' ) ? astra_get_option( 'cart-plus-minus-button-type' ) : 'normal';
 			/** @psalm-suppress UndefinedClass */ // phpcs:ignore Generic.Commenting.DocComment.MissingShort
 
 			$astra_localize = array(
@@ -385,20 +626,26 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				'is_scroll_to_id'                 => astra_get_option( 'enable-scroll-to-id' ),
 				'is_scroll_to_top'                => astra_get_option( 'scroll-to-top-enable' ),
 				'is_header_footer_builder_active' => Astra_Builder_Helper::$is_header_footer_builder_active,
+				'responsive_cart_click'           => astra_get_option( 'responsive-cart-click-action' ),
+				'is_dark_palette'                 => Astra_Global_Palette::is_dark_palette(),
 			);
 
 			wp_localize_script( 'astra-theme-js', 'astra', apply_filters( 'astra_theme_js_localize', $astra_localize ) );
 
-			$astra_qty_btn_localize = array(
-				'plus_qty'   => __( 'Plus Quantity', 'astra' ),
-				'minus_qty'  => __( 'Minus Quantity', 'astra' ),
-				'style_type' => $quantity_type,    // Quantity button type.
-			);
+			// Only localize the quantity button script if it should be loaded.
+			if ( class_exists( 'WooCommerce' ) && self::should_load_add_to_cart_quantity_btn_script() ) {
+				$astra_qty_btn_localize = array(
+					'plus_qty'   => __( 'Plus Quantity', 'astra' ),
+					'minus_qty'  => __( 'Minus Quantity', 'astra' ),
+					'style_type' => $quantity_type,    // Quantity button type.
+				);
 
-			wp_localize_script( 'astra-add-to-cart-quantity-btn', 'astra_qty_btn', apply_filters( 'astra_qty_btn_js_localize', $astra_qty_btn_localize ) );
+				wp_localize_script( 'astra-add-to-cart-quantity-btn', 'astra_qty_btn', apply_filters( 'astra_qty_btn_js_localize', $astra_qty_btn_localize ) );
+			}
 
 			$astra_cart_localize_data = array(
-				'desktop_layout' => astra_get_option( 'woo-header-cart-click-action' ),    // WooCommerce sidebar flyout desktop.
+				'desktop_layout'        => astra_get_option( 'woo-header-cart-click-action' ),    // WooCommerce sidebar flyout desktop.
+				'responsive_cart_click' => astra_get_option( 'responsive-cart-click-action' ),    // WooCommerce responsive devices flyout.
 			);
 
 			wp_localize_script( 'astra-mobile-cart', 'astra_cart', apply_filters( 'astra_cart_js_localize', $astra_cart_localize_data ) );
@@ -436,7 +683,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 
 				$astra_live_search_localize_data = array(
 					'rest_api_url'                 => get_rest_url(),
-					'search_posts_per_page'        => 5,
+					'search_posts_per_page'        => astra_get_option( 'live-search-result-count' ),
 					'search_post_types'            => $search_post_types,
 					'search_post_types_labels'     => $search_post_type_label,
 					'search_language'              => astra_get_current_language_slug(),
@@ -449,7 +696,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				wp_localize_script( 'astra-live-search', 'astra_search', apply_filters( 'astra_search_js_localize', $astra_live_search_localize_data ) );
 			}
 
-			if ( class_exists( 'woocommerce' ) ) {
+			if ( class_exists( 'woocommerce' ) && self::should_load_woocommerce_js() ) {
 				$is_astra_pro = function_exists( 'astra_has_pro_woocommerce_addon' ) ? astra_has_pro_woocommerce_addon() : false;
 
 				$astra_shop_add_to_cart_localize_data = array(
@@ -494,6 +741,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 
 			// Trim white space for faster page loading.
 			if ( ! empty( $css ) ) {
+				  // phpcs:ignore Generic.PHP.ForbiddenFunctions.FoundWithAlternative -- Safe usage: no /e modifier, removes CSS comments only
 				$css = preg_replace( '!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css );
 				$css = str_replace( array( "\r\n", "\r", "\n", "\t", '  ', '    ', '    ' ), '', $css );
 				$css = str_replace( ', ', ',', $css );
@@ -542,11 +790,15 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 				'var(--ast-global-color-7)'     => $astra_global_palette_instance->get_color_by_palette_variable( 'var(--ast-global-color-7)' ),
 				'var(--ast-global-color-8)'     => $astra_global_palette_instance->get_color_by_palette_variable( 'var(--ast-global-color-8)' ),
 				'ast_wp_version_higher_6_3'     => astra_wp_version_compare( '6.2.99', '>' ),
+				'ast_wp_version_higher_6_4'     => astra_wp_version_compare( '6.4.99', '>' ),
+				'is_dark_palette'               => Astra_Global_Palette::is_dark_palette(),
 				'apply_content_bg_fullwidth'    => astra_apply_content_background_fullwidth_layouts(),
 				'customizer_content_bg_obj'     => $content_bg_obj,
 				'customizer_site_bg_obj'        => $site_bg_obj,
 				'is_astra_pro_colors_activated' => $is_astra_pro_colors_activated,
 				'site_builder_url'              => $site_builder_url,
+				'mobile_logo'                   => astra_get_option( 'mobile-header-logo' ),
+				'mobile_logo_state'             => astra_get_option( 'different-mobile-logo' ),
 			);
 
 			wp_localize_script( 'astra-block-editor-script', 'astraColors', apply_filters( 'astra_theme_root_colors', $astra_colors ) );
@@ -573,7 +825,7 @@ if ( ! class_exists( 'Astra_Enqueue_Scripts' ) ) {
 		 * Function to check if enqueuing of Astra assets are disabled.
 		 *
 		 * @since 2.1.0
-		 * @return boolean
+		 * @return bool
 		 */
 		public static function enqueue_theme_assets() {
 			return apply_filters( 'astra_enqueue_theme_assets', true );

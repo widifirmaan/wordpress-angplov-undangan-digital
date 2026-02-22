@@ -15,7 +15,7 @@ use Elementor\Utils;
 use Elementor\Group_Control_Text_Stroke;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 /**
@@ -27,6 +27,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 3.15.0
  */
 class Nested_Accordion extends Widget_Nested_Base {
+
+	private $optimized_markup = null;
+	private $widget_container_selector = '';
+
+	protected function is_dynamic_content(): bool {
+		return true;
+	}
 
 	public function get_name() {
 		return 'nested-accordion';
@@ -44,15 +51,27 @@ class Nested_Accordion extends Widget_Nested_Base {
 		return [ 'nested', 'tabs', 'accordion', 'toggle' ];
 	}
 
+	public function get_style_depends(): array {
+		return [ 'widget-nested-accordion' ];
+	}
+
 	public function show_in_panel(): bool {
-		return Plugin::$instance->experiments->is_feature_active( 'nested-elements' );
+		return Plugin::$instance->experiments->is_feature_active( 'nested-elements', true );
+	}
+
+	public function has_widget_inner_wrapper(): bool {
+		return ! Plugin::$instance->experiments->is_feature_active( 'e_optimized_markup' );
 	}
 
 	protected function item_content_container( int $index ) {
 		return [
 			'elType' => 'container',
 			'settings' => [
-				'_title' => sprintf( __( 'item #%s', 'elementor' ), $index ),
+				'_title' => sprintf(
+					/* translators: %d: Item index. */
+					__( 'item #%d', 'elementor' ),
+					$index
+				),
 				'content_width' => 'full',
 			],
 		];
@@ -71,6 +90,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 	}
 
 	protected function get_default_children_title() {
+		/* translators: %d: Item index. */
 		return esc_html__( 'Item #%d', 'elementor' );
 	}
 
@@ -87,6 +107,11 @@ class Nested_Accordion extends Widget_Nested_Base {
 	}
 
 	protected function register_controls() {
+		if ( null === $this->optimized_markup ) {
+			$this->optimized_markup = Plugin::$instance->experiments->is_feature_active( 'e_optimized_markup' ) && ! $this->has_widget_inner_wrapper();
+			$this->widget_container_selector = $this->optimized_markup ? '' : ' > .elementor-widget-container';
+		}
+
 		$this->start_controls_section( 'section_items', [
 			'label' => esc_html__( 'Layout', 'elementor' ),
 		] );
@@ -142,7 +167,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 					],
 				],
 				'title_field' => '{{{ item_title }}}',
-				'button_text' => 'Add Item',
+				'button_text' => esc_html__( 'Add Item', 'elementor' ),
 			]
 		);
 
@@ -301,7 +326,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 			[
 				'type' => Controls_Manager::ALERT,
 				'alert_type' => 'info',
-				'content' => esc_html__( 'Let Google know that this section contains an FAQ. Make sure to only use it only once per page', 'elementor' ),
+				'content' => esc_html__( 'Google no longer supports the FAQ schema; however, it may still hold secondary value for AI and LLMs.', 'elementor' ),
 				'condition' => [
 					'faq_schema[value]' => 'yes',
 				],
@@ -468,8 +493,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 	}
 
 	private function add_content_style_section() {
-
-		$low_specificity_accordion_item_selector = ':where( {{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item ) > .e-con';
+		$low_specificity_accordion_item_selector = ":where( {{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item ) > .e-con";
 
 		$this->start_controls_section(
 			'section_content_style',
@@ -554,7 +578,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 			Group_Control_Typography::get_type(),
 			[
 				'name' => 'title_typography',
-				'selector' => ':where( {{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item > .e-n-accordion-item-title > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text',
+				'selector' => ":where( {{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item > .e-n-accordion-item-title > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text",
 				'fields_options' => [
 					'font_size' => [
 						'selectors' => [
@@ -646,15 +670,15 @@ class Nested_Accordion extends Widget_Nested_Base {
 		switch ( $state ) {
 			case 'hover':
 				$translated_tab_text = esc_html__( 'Hover', 'elementor' );
-				$translated_tab_css_selector = ':where( {{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item:not([open]) > .e-n-accordion-item-title:hover > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text';
+				$translated_tab_css_selector = ":where( {{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item:not([open]) > .e-n-accordion-item-title:hover > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text";
 				break;
 			case 'active':
 				$translated_tab_text = esc_html__( 'Active', 'elementor' );
-				$translated_tab_css_selector = ':where( {{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item[open] > .e-n-accordion-item-title > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text';
+				$translated_tab_css_selector = ":where( {{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item[open] > .e-n-accordion-item-title > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text";
 				break;
 			default:
 				$translated_tab_text = esc_html__( 'Normal', 'elementor' );
-				$translated_tab_css_selector = ':where( {{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item:not([open]) > .e-n-accordion-item-title:not(hover) > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text';
+				$translated_tab_css_selector = ":where( {{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item:not([open]) > .e-n-accordion-item-title:not(hover) > .e-n-accordion-item-title-header ) > .e-n-accordion-item-title-text";
 				break;
 		}
 
@@ -682,11 +706,6 @@ class Nested_Accordion extends Widget_Nested_Base {
 				[
 					'name' => $context . '_' . $state . '_text_shadow',
 					'selector' => '{{WRAPPER}} ' . $translated_tab_css_selector,
-					'fields_options' => [
-						'text_shadow_type' => [
-							'label' => esc_html__( 'Shadow', 'elementor' ),
-						],
-					],
 				]
 			);
 
@@ -706,7 +725,8 @@ class Nested_Accordion extends Widget_Nested_Base {
 	 * @string $state
 	 */
 	private function add_border_and_radius_style( $state ) {
-		$selector = '{{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item > .e-n-accordion-item-title';
+		$selector = "{{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item > .e-n-accordion-item-title";
+
 		$translated_tab_text = esc_html__( 'Normal', 'elementor' );
 
 		switch ( $state ) {
@@ -715,7 +735,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 				$translated_tab_text = esc_html__( 'Hover', 'elementor' );
 				break;
 			case 'active':
-				$selector = '{{WRAPPER}} > .elementor-widget-container > .e-n-accordion > .e-n-accordion-item[open] > .e-n-accordion-item-title';
+				$selector = "{{WRAPPER}}{$this->widget_container_selector} > .e-n-accordion > .e-n-accordion-item[open] > .e-n-accordion-item-title";
 				$translated_tab_text = esc_html__( 'Active', 'elementor' );
 				break;
 		}
@@ -753,7 +773,7 @@ class Nested_Accordion extends Widget_Nested_Base {
 		$this->end_controls_tab();
 	}
 
-	private function is_active_icon_exist( $settings ):bool {
+	private function is_active_icon_exist( $settings ): bool {
 		return array_key_exists( 'accordion_item_title_icon_active', $settings ) && ! empty( $settings['accordion_item_title_icon_active'] ) && ! empty( $settings['accordion_item_title_icon_active']['value'] );
 	}
 
@@ -890,16 +910,12 @@ class Nested_Accordion extends Widget_Nested_Base {
 	}
 
 	protected function get_initial_config(): array {
-		if ( Plugin::$instance->experiments->is_feature_active( 'e_nested_atomic_repeaters' ) ) {
-			return array_merge( parent::get_initial_config(), [
-				'support_improved_repeaters' => true,
-				'target_container' => [ '.e-n-accordion' ],
-				'node' => 'details',
-				'is_interlaced' => true,
-			] );
-		}
-
-		return parent::get_initial_config();
+		return array_merge( parent::get_initial_config(), [
+			'support_improved_repeaters' => true,
+			'target_container' => [ '.e-n-accordion' ],
+			'node' => 'details',
+			'is_interlaced' => true,
+		] );
 	}
 
 	protected function content_template_single_repeater_item() {
@@ -922,11 +938,20 @@ class Nested_Accordion extends Widget_Nested_Base {
 
 		const itemTitleTextAttributes = {
 			'class': [ 'e-n-accordion-item-title-text' ],
+			'data-binding-index': view.collection.length + 1,
 			'data-binding-type': 'repeater-item',
 			'data-binding-repeater-name': 'items',
-			'data-binding-setting': ['item_title'],
-			'data-binding-index': view.collection.length + 1,
-			'data-binding-dynamic': 'true',
+			'data-binding-setting': ['item_title', 'element_css_id'],
+			'data-binding-config': JSON.stringify({
+				'element_css_id': {
+					editType: 'attribute',
+					attr: 'id',
+					selector: 'details'
+				},
+				'item_title': {
+					editType: 'text'
+				}
+			}),
 		};
 
 		view.addRenderAttribute( 'details-container', itemWrapperAttributes, null, true );
@@ -996,11 +1021,20 @@ class Nested_Accordion extends Widget_Nested_Base {
 
 					view.addRenderAttribute( itemTitleTextKey, {
 						'class': ['e-n-accordion-item-title-text'],
+						'data-binding-index': itemCount,
 						'data-binding-type': 'repeater-item',
 						'data-binding-repeater-name': 'items',
-						'data-binding-setting': ['item_title'],
-						'data-binding-index': itemCount,
-						'data-binding-dynamic': 'true',
+						'data-binding-setting': ['item_title', 'element_css_id'],
+						'data-binding-config': JSON.stringify({
+							'element_css_id': {
+								editType: 'attribute',
+								attr: 'id',
+								selector: 'details'
+							},
+							'item_title': {
+								editType: 'text'
+							}
+						}),
 					});
 				#>
 

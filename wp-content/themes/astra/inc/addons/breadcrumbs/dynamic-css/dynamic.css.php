@@ -112,10 +112,11 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 
 	if ( 'unicode' === $breadcrumb_separator_selector ) {
 		$current_selected_separator = $breadcrumb_separator;
+	} elseif ( 'custom' === $breadcrumb_separator_selector ) {
+		$current_selected_separator = $breadcrumb_separator;
 	} else {
 		$current_selected_separator = $breadcrumb_separator_selector;
 	}
-
 
 	$css .= astra_parse_css(
 		array(
@@ -130,7 +131,7 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 	/**
 	 * Breadcrumb Colors & Typography
 	 */
-	if ( function_exists( 'yoast_breadcrumb' ) && true === $wpseo_option['breadcrumbs-enable'] && $breadcrumb_source && 'yoast-seo-breadcrumbs' == $breadcrumb_source ) {
+	if ( function_exists( 'yoast_breadcrumb' ) && true === $wpseo_option['breadcrumbs-enable'] && $breadcrumb_source && 'yoast-seo-breadcrumbs' === $breadcrumb_source ) {
 
 		/* Yoast SEO Breadcrumb CSS - Desktop */
 		$breadcrumbs_desktop = array(
@@ -189,7 +190,7 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 				'font-size' => astra_responsive_font( $breadcrumb_font_size, 'mobile' ),
 			),
 		);
-	} elseif ( function_exists( 'bcn_display' ) && $breadcrumb_source && 'breadcrumb-navxt' == $breadcrumb_source ) {
+	} elseif ( function_exists( 'bcn_display' ) && $breadcrumb_source && 'breadcrumb-navxt' === $breadcrumb_source ) {
 
 		/* Breadcrumb NavXT CSS - Desktop */
 		$breadcrumbs_desktop = array(
@@ -248,7 +249,7 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 				'font-size' => astra_responsive_font( $breadcrumb_font_size, 'mobile' ),
 			),
 		);
-	} elseif ( function_exists( 'rank_math_the_breadcrumbs' ) && $breadcrumb_source && 'rank-math' == $breadcrumb_source ) {
+	} elseif ( function_exists( 'rank_math_the_breadcrumbs' ) && $breadcrumb_source && 'rank-math' === $breadcrumb_source ) {
 
 		/* Rank Math CSS - Desktop */
 		$breadcrumbs_desktop = array(
@@ -307,7 +308,7 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 				'font-size' => astra_responsive_font( $breadcrumb_font_size, 'mobile' ),
 			),
 		);
-	} elseif ( function_exists( 'seopress_display_breadcrumbs' ) && $breadcrumb_source && 'seopress' == $breadcrumb_source ) {
+	} elseif ( function_exists( 'seopress_display_breadcrumbs' ) && $breadcrumb_source && 'seopress' === $breadcrumb_source ) {
 
 		/* SEOPress CSS - Desktop */
 		$breadcrumbs_desktop = array(
@@ -514,7 +515,6 @@ function astra_breadcrumb_section_dynamic_css( $dynamic_css, $dynamic_css_filter
 	$breadcrumbs_desktop['.ast-breadcrumbs-wrapper'] = array(
 		'text-align' => esc_attr( $breadcrumb_alignment ),
 	);
-
 
 	$css .= astra_parse_css( $breadcrumbs_desktop );
 	$css .= astra_parse_css( $breadcrumbs_tablet, '', astra_get_tablet_breakpoint() );

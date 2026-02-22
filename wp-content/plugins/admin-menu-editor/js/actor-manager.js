@@ -31,6 +31,9 @@ class AmeBaseActor {
         }
         return null;
     }
+    getOwnCapabilities() {
+        return this.capabilities;
+    }
     static getActorSpecificity(actorId) {
         let actorType = actorId.substring(0, actorId.indexOf(':')), specificity;
         switch (actorType) {
@@ -75,6 +78,9 @@ class AmeRole extends AmeBaseActor {
         }
         return super.hasOwnCap(capability);
     }
+    getRoleName() {
+        return this.name;
+    }
 }
 class AmeUser extends AmeBaseActor {
     constructor(userLogin, displayName, capabilities, roles, isSuperAdmin = false, userId, metaCapabilities = {}) {
@@ -114,6 +120,11 @@ class AmeSuperAdmin extends AmeBaseActor {
     hasOwnCap(capability) {
         //The Super Admin has all possible capabilities except the special "do_not_allow" flag.
         return (capability !== 'do_not_allow');
+    }
+    getOwnCapabilities() {
+        //It's not meaningful to list all capabilities of the Super Admin, because they behave as if
+        //they have all capabilities including non-existent ones.
+        return null;
     }
 }
 AmeSuperAdmin.permanentActorId = 'special:super_admin';
@@ -156,6 +167,26 @@ class AmeActorManager {
         for (let i = 0; i < tagMetaCaps.length; i++) {
             this.tagMetaCaps[tagMetaCaps[i]] = true;
         }
+        this.loggedInUserActor = new class extends AmeBaseActor {
+            constructor() {
+                super('special:logged_in_user', 'Logged In Users', {});
+            }
+            hasOwnCap(capability) {
+                //The only capability that *all* roles and users have is the special "exist" capability.
+                return (capability === 'exist');
+            }
+        };
+        this.anonymousUserActor = new class extends AmeBaseActor {
+            constructor() {
+                super('special:anonymous_user', 'Logged Out Users', {});
+            }
+            hasOwnCap() {
+                //Anonymous visitors usually have no capabilities.
+                return false;
+            }
+        };
+        this.addSpecialActor(this.loggedInUserActor);
+        this.addSpecialActor(this.anonymousUserActor);
     }
     // noinspection JSUnusedGlobalSymbols
     actorCanAccess(actorId, grantAccess, defaultCapability = null) {
@@ -292,11 +323,50 @@ class AmeActorManager {
         }
         return capability;
     }
-    addSpecialActor(actor) {
-        if (actor.getId() === AmeSuperAdmin.permanentActorId) {
-            throw 'The Super Admin actor is immutable and cannot be replaced.';
+    /**
+     * Check if an actor might have a suspected meta capability.
+     *
+     * Returns NULL if the capability is not a detected meta capability, or if the actor ID is invalid.
+     */
+    maybeHasMetaCap(actorId, metaCapability) {
+        //Is this a meta capability?
+        if (!this.suspectedMetaCaps.hasOwnProperty(metaCapability)) {
+            return null;
         }
-        this.specialActors[actor.getId()] = actor;
+        const actor = this.getActor(actorId);
+        if (actor === null) {
+            return null;
+        }
+        //For some actors like the current user, we might already know whether they have
+        //the meta capability. The plugin checks that when opening the menu editor.
+        const hasOwnCap = actor.hasOwnCap(metaCapability);
+        if (hasOwnCap !== null) {
+            return { prediction: hasOwnCap };
+        }
+        const mappedCaps = this.suspectedMetaCaps[metaCapability];
+        //If we don't know what capabilities this meta capability maps to, we can't predict
+        //whether the actor has it or not.
+        if (mappedCaps.length < 1) {
+            return { prediction: null };
+        }
+        //Hacky workaround for invalid data from the server.
+        if (!(AmeActorManager._.isArray(mappedCaps))) {
+            if (console && console.warn) {
+                console.warn('AmeActorManager.maybeHasMetaCap: Invalid mapped capabilities for meta capability "'
+                    + metaCapability + '". Expected an array, got:', mappedCaps);
+            }
+            return { prediction: null };
+        }
+        //The actor needs to have all the mapped capabilities to have the meta capability.
+        for (const cap of mappedCaps) {
+            if (this.actorHasCap(actorId, cap) !== true) {
+                return { prediction: false };
+            }
+        }
+        return { prediction: true };
+    }
+    getSuspectedMetaCaps() {
+        return AmeActorManager._.keys(this.suspectedMetaCaps);
     }
     /* -------------------------------
      * Roles
@@ -308,9 +378,6 @@ class AmeActorManager {
         return this.roles.hasOwnProperty(roleId);
     }
     ;
-    getSuperAdmin() {
-        return this.superAdmin;
-    }
     /* -------------------------------
      * Users
      * ------------------------------- */
@@ -327,6 +394,29 @@ class AmeActorManager {
     }
     getGroupActorsFor(userLogin) {
         return this.users[userLogin].groupActors;
+    }
+    /* -------------------------------
+     * Special actors
+     * ------------------------------- */
+    getSuperAdmin() {
+        return this.superAdmin;
+    }
+    /**
+     * Get the special actor that represents any logged-in user.
+     *
+     * Note: Not to be confused with the specific user that's currently logged in.
+     */
+    getGenericLoggedInUser() {
+        return this.loggedInUserActor;
+    }
+    getAnonymousUser() {
+        return this.anonymousUserActor;
+    }
+    addSpecialActor(actor) {
+        if (actor.getId() === AmeSuperAdmin.permanentActorId) {
+            throw 'The Super Admin actor is immutable and cannot be replaced.';
+        }
+        this.specialActors[actor.getId()] = actor;
     }
     /* -------------------------------
      * Granted capability manipulation
@@ -501,8 +591,33 @@ class AmeActorManager {
     createUserFromProperties(properties) {
         return AmeUser.createFromProperties(properties);
     }
+    compareRolesForSorting(a, b) {
+        const defaultRoleOrder = AmeActorManager.defaultRoleOrder;
+        const aId = a.getId();
+        const bId = b.getId();
+        if (defaultRoleOrder.hasOwnProperty(aId) && defaultRoleOrder.hasOwnProperty(bId)) {
+            return defaultRoleOrder[aId] - defaultRoleOrder[bId];
+        }
+        else if (defaultRoleOrder.hasOwnProperty(aId)) {
+            return -1;
+        }
+        else if (defaultRoleOrder.hasOwnProperty(bId)) {
+            return 1;
+        }
+        else {
+            return a.getDisplayName().localeCompare(b.getDisplayName());
+        }
+    }
 }
 AmeActorManager._ = wsAmeLodash;
+//Sort the default roles in a fixed order, the rest alphabetically.
+AmeActorManager.defaultRoleOrder = {
+    'role:administrator': 1,
+    'role:editor': 2,
+    'role:author': 3,
+    'role:contributor': 4,
+    'role:subscriber': 5
+};
 class AmeObservableActorFeatureMap {
     constructor(initialData) {
         this.items = {};
@@ -541,12 +656,24 @@ class AmeObservableActorFeatureMap {
                 }
             }
         }
+        this.numberOfObservables();
         return result;
     }
+    /**
+     * Set all values from a map.
+     *
+     * Any actors not in the new map will be reset to null.
+     */
     setAll(values) {
         for (let actorId in values) {
             if (values.hasOwnProperty(actorId)) {
                 this.set(actorId, values[actorId]);
+            }
+        }
+        //Reset any actors that are not in the new values.
+        for (let actorId in this.items) {
+            if (this.items.hasOwnProperty(actorId) && !values.hasOwnProperty(actorId)) {
+                this.items[actorId](null);
             }
         }
     }
@@ -676,6 +803,38 @@ const AmeActorFeatureStrategyDefaults = {
     noValueDefault: false,
     autoResetAll: true,
 };
+function ameUnserializeFeatureStrategySettings(input) {
+    const unserialized = {};
+    if (typeof input.superAdminDefault !== 'undefined') {
+        unserialized.superAdminDefault = input.superAdminDefault;
+    }
+    if (typeof input.noValueDefault !== 'undefined') {
+        unserialized.noValueDefault = input.noValueDefault;
+    }
+    if (typeof input.roleDefault !== 'undefined') {
+        if ((input.roleDefault === null) || (typeof input.roleDefault === 'boolean')) {
+            unserialized.roleDefault = input.roleDefault;
+        }
+        else {
+            const copy = Object.assign({}, input.roleDefault);
+            unserialized.roleDefault = (roleName) => copy[roleName] || null;
+        }
+    }
+    if (typeof input.roleCombinationMode === 'string') {
+        switch (input.roleCombinationMode) {
+            case 'Every':
+                unserialized.roleCombinationMode = AmeRoleCombinationMode.Every;
+                break;
+            case 'Some':
+                unserialized.roleCombinationMode = AmeRoleCombinationMode.Some;
+                break;
+            case 'CustomOrSome':
+                unserialized.roleCombinationMode = AmeRoleCombinationMode.CustomOrSome;
+                break;
+        }
+    }
+    return unserialized;
+}
 class AmeActorFeatureStrategy {
     constructor(settings) {
         this.settings = Object.assign({}, AmeActorFeatureStrategyDefaults, settings);
@@ -788,6 +947,19 @@ class AmeActorFeatureStrategy {
     setFeatureEnabledForActor(actorFeatureMap, actor, enabled) {
         if (actor === null) {
             this.setAllActorStates(actorFeatureMap, enabled);
+            return;
+        }
+        //In "Some" combination mode, when the role default is `false`, explicitly disabling something
+        //for a role doesn't matter because custom role settings don't get priority. So we don't need
+        //to store a `false` value in that case.
+        if (!enabled
+            && (this.settings.roleCombinationMode === AmeRoleCombinationMode.Some)
+            //Is this a role actor?
+            && actor.getId().startsWith('role:')
+            //Is the effective default for all roles `false`?
+            && ((this.settings.roleDefault === false)
+                || ((this.settings.roleDefault === null) && !this.settings.noValueDefault))) {
+            actorFeatureMap.reset(actor.getId());
             return;
         }
         actorFeatureMap.set(actor.getId(), enabled);

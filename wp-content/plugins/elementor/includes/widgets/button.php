@@ -2,6 +2,7 @@
 namespace Elementor;
 
 use Elementor\Includes\Widgets\Traits\Button_Trait;
+use Elementor\Modules\Promotions\Controls\Promotion_Control;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -79,6 +80,10 @@ class Widget_Button extends Widget_Base {
 
 	protected function is_dynamic_content(): bool {
 		return false;
+	}
+
+	public function has_widget_inner_wrapper(): bool {
+		return ! Plugin::$instance->experiments->is_feature_active( 'e_optimized_markup' );
 	}
 
 	/**

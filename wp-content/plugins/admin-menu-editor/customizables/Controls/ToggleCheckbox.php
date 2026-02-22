@@ -3,6 +3,7 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 /**
@@ -24,9 +25,9 @@ class ToggleCheckbox extends ClassicControl {
 	protected $onValue = '1';
 	protected $offValue = '0';
 
-	public function __construct($settings = [], $params = []) {
+	public function __construct($settings = [], $params = [], $children = []) {
 		$this->hasPrimaryInput = true;
-		parent::__construct($settings, $params);
+		parent::__construct($settings, $params, $children);
 
 		if ( array_key_exists('onValue', $params) ) {
 			$this->onValue = $params['onValue'];
@@ -36,8 +37,8 @@ class ToggleCheckbox extends ClassicControl {
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
-		$isChecked = ($this->getMainSettingValue() === $this->onValue);
+	public function renderContent(Renderer $renderer, Context $context) {
+		$isChecked = ($this->getMainSettingValue(null, $context) === $this->onValue);
 
 		//Encode non-scalar values as JSON. To simplify things for the script that
 		//receives this data, we'll either encode both values or none of them.
@@ -54,7 +55,7 @@ class ToggleCheckbox extends ClassicControl {
 			'input',
 			[
 				'type'  => 'hidden',
-				'name'  => $this->getFieldName(),
+				'name'  => $this->getFieldName($context),
 				'value' => $offString,
 				'class' => 'ame-toggle-checkbox-alternative',
 			]
@@ -70,9 +71,9 @@ class ToggleCheckbox extends ClassicControl {
 
 		//phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Method is safe, and label is allowed to have HTML.
 		echo $this->buildInputElement(
-			[
+			$context, [
 				'type'               => 'checkbox',
-				'name'               => $this->getFieldName(),
+				'name'               => $this->getFieldName($context),
 				'value'              => $onString,
 				'checked'            => $isChecked,
 				'data-ame-on-value'  => $jsonOnValue,
@@ -83,7 +84,7 @@ class ToggleCheckbox extends ClassicControl {
 					. ', offValue: ' . $jsonOffValue . ' }',
 			]
 		);
-		echo ' ', $this->label;
+		echo ' ', $this->getLabel($context);
 		//phpcs:enable
 
 		$this->outputNestedDescription();
@@ -106,11 +107,11 @@ class ToggleCheckbox extends ClassicControl {
 		}
 	}
 
-	public function includesOwnLabel() {
+	public function includesOwnLabel(): bool {
 		return true;
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		return array_merge(
 			parent::getKoComponentParams(),
 			[

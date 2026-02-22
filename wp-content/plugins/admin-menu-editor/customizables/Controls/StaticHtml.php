@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 
 /**
@@ -21,20 +22,20 @@ class StaticHtml extends ClassicControl {
 
 	protected $koComponentContainerType = 'span';
 
-	public function __construct($html = '', $params = []) {
-		parent::__construct([], $params);
+	public function __construct($html = '', $params = [], $children = []) {
+		parent::__construct([], $params, $children);
 		$this->html = $html;
 		if ( isset($params['componentContainer']) ) {
 			$this->koComponentContainerType = $params['componentContainer'];
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
+	public function renderContent(Renderer $renderer, Context $context) {
 		//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML is the point.
 		echo $this->html;
 	}
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		return array_merge(
 			parent::getKoComponentParams(),
 			[

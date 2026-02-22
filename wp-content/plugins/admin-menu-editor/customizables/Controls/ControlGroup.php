@@ -2,6 +2,8 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
+
 /**
  * A group of closely related controls.
  *
@@ -40,8 +42,8 @@ class ControlGroup extends Container {
 	 */
 	protected $isFullWidth = false;
 
-	public function __construct($title, $children = [], $params = []) {
-		parent::__construct($title, $children, $params);
+	public function __construct($title, $params = [], $children = []) {
+		parent::__construct($title, $params, $children);
 		if ( isset($params['stacked']) ) {
 			$this->isStacked = boolval($params['stacked']);
 		}
@@ -54,7 +56,7 @@ class ControlGroup extends Container {
 		$this->parseEnabledParam($params);
 	}
 
-	public function add($child) {
+	public function add(UiElement $child) {
 		if ( $child instanceof Section ) {
 			throw new \InvalidArgumentException('Control groups cannot contain sections.');
 		}
@@ -115,8 +117,8 @@ class ControlGroup extends Container {
 		return 'control-group';
 	}
 
-	public function serializeForJs() {
-		$result = parent::serializeForJs();
+	public function serializeForJs(Context $context): array {
+		$result = parent::serializeForJs($context);
 		$labelFor = $this->getLabelFor();
 		if ( $labelFor !== null ) {
 			$result['labelFor'] = $labelFor;
@@ -125,7 +127,7 @@ class ControlGroup extends Container {
 	}
 
 
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
 		$params['enabled'] = $this->serializeConditionForJs();
 

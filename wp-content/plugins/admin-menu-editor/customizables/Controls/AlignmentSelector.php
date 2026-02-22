@@ -5,8 +5,8 @@ namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 class AlignmentSelector extends RadioButtonBar {
 	protected $type = 'alignment-selector';
 
-	public function __construct($settings = array(), $params = array()) {
-		parent::__construct($settings, $params);
+	public function __construct($settings = array(), $params = array(), $children = []) {
+		parent::__construct($settings, $params, $children);
 
 		//Set default choice labels and icons for recognized values.
 		$choices = array(

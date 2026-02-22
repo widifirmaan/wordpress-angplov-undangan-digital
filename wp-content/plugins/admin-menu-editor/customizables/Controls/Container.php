@@ -2,40 +2,26 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
-abstract class Container extends UiElement implements \IteratorAggregate, ControlContainer {
-	/**
-	 * @var UiElement[]
-	 */
-	protected $children = [];
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
 
+abstract class Container extends UiElement implements \IteratorAggregate, ControlContainer {
 	/**
 	 * @var string
 	 */
 	protected $title = '';
 
 	/**
-	 * @var null|\YahnisElsts\AdminMenuEditor\Customizable\Controls\Tooltip
+	 * @var string[] List of CSS classes to apply to the children container element (for containers that have one).
 	 */
-	protected $tooltip = null;
+	protected $childrenContainerClasses = [];
 
-	public function __construct($title, $children = [], $params = []) {
-		parent::__construct($params);
+	public function __construct($title, $params = [], $children = []) {
+		parent::__construct($params, $children);
 		$this->title = $title;
-		foreach ($children as $child) {
-			$this->add($child);
-		}
 
-		if ( isset($params['tooltip']) ) {
-			$this->tooltip = $params['tooltip'];
+		if ( !empty($params['childrenContainerClasses']) ) {
+			$this->childrenContainerClasses = (array)$params['childrenContainerClasses'];
 		}
-	}
-
-	/**
-	 * @param UiElement $child
-	 * @return void
-	 */
-	public function add($child) {
-		$this->children[] = $child;
 	}
 
 	/**
@@ -97,20 +83,6 @@ abstract class Container extends UiElement implements \IteratorAggregate, Contro
 	}
 
 	/**
-	 * @return \YahnisElsts\AdminMenuEditor\Customizable\Controls\Tooltip|null
-	 */
-	public function getTooltip() {
-		return $this->tooltip;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function hasTooltip() {
-		return ($this->tooltip !== null);
-	}
-
-	/**
 	 * Recursively search the container for a UI element that has the specified ID.
 	 *
 	 * @param string $id
@@ -138,18 +110,16 @@ abstract class Container extends UiElement implements \IteratorAggregate, Contro
 		return !empty($this->children);
 	}
 
-	public function serializeForJs() {
-		$result = parent::serializeForJs();
+	public function serializeForJs(Context $context): array {
+		$result = parent::serializeForJs($context);
 		if ( $this->hasTitle() ) {
 			$result['title'] = $this->title;
 		}
 
-		if ( !empty($this->children) ) {
-			$result['children'] = [];
-			foreach ($this->children as $child) {
-				$result['children'][] = $child->serializeForJs();
-			}
+		if ( !empty($this->childrenContainerClasses) ) {
+			$result['childrenContainerClasses'] = $this->childrenContainerClasses;
 		}
+
 		return $result;
 	}
 
@@ -177,6 +147,12 @@ abstract class Container extends UiElement implements \IteratorAggregate, Contro
 			if ( $child instanceof ControlContainer ) {
 				yield from $child->getAllDescendants();
 			}
+		}
+	}
+
+	public function getAllReferencedSettings(Context $context) {
+		foreach ($this->getChildren() as $child) {
+			yield from $child->getAllReferencedSettings($context);
 		}
 	}
 }

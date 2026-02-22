@@ -133,23 +133,8 @@ if ( defined('AME_DISABLE_REDIRECTS') && constant('AME_DISABLE_REDIRECTS') ) {
 		</div>
 	</div>
 
-	<form class="ame-rui-save-form" method="post" data-bind="submit: saveChanges" action="<?php
-	echo esc_url(add_query_arg(array('noheader' => '1'), $moduleTabUrl));
-	?>">
-		<?php
-		submit_button(
-			null, 'primary', 'submit', true,
-			[
-				'data-bind' => 'disable: isSaving',
-				'disabled'  => 'disabled',
-			]
-		);
-		?>
-		<input type="hidden" name="settings" value="" data-bind="value: settingsData">
-		<input type="hidden" name="action" value="ame-save-redirect-settings">
-		<?php wp_nonce_field('ame-save-redirect-settings'); ?>
-		<input type="hidden" name="selectedTrigger" data-bind="value: selectedTrigger">
-	</form>
+	<!--suppress HtmlUnknownTag -->
+	<ame-save-settings-form params="form: saveSettingsForm"></ame-save-settings-form>
 
 	<label for="ame-rui-menu-items" style="display: none">Admin menu items</label>
 	<select name="ame-rui-menu-items" id="ame-rui-menu-items" size="10" style="display: none;"

@@ -42,4 +42,15 @@ class Tooltip {
 	public function getExtraClasses() {
 		return $this->extraClasses;
 	}
+
+	public function serializeForJs(): array {
+		$result = array(
+			'type'        => $this->type,
+			'htmlContent' => $this->htmlContent,
+		);
+		if ( !empty($this->extraClasses) ) {
+			$result['extraClasses'] = $this->extraClasses;
+		}
+		return $result;
+	}
 }

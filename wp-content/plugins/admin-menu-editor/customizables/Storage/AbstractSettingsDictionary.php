@@ -9,6 +9,7 @@ use YahnisElsts\AdminMenuEditor\Customizable\Settings\AbstractSetting;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\PredefinedSet;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\Setting;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\SettingGeneratorInterface;
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\DynamicBinding;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\StringSetting;
 
 /**
@@ -406,11 +407,23 @@ abstract class AbstractSettingsDictionary implements \ArrayAccess, \JsonSerializ
 		return strtotime($isoTimestamp);
 	}
 
+	/**
+	 * @return string
+	 */
+	public function getIdPrefix() {
+		return $this->idPrefix;
+	}
+
+
 	public function elementBuilder() {
 		return new ElementBuilderFactory($this);
 	}
 
 	public function settingFactory() {
 		return new SettingFactory($this->store, $this->defaults, $this->idPrefix);
+	}
+
+	public function ref($settingIdOrPath): DynamicBinding {
+		return new DynamicBinding($settingIdOrPath, $this);
 	}
 }

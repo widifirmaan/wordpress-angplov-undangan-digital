@@ -2,8 +2,8 @@
 namespace Elementor\Core\Files;
 
 use Elementor\Core\Base\Document as Document_Base;
+use Elementor\Core\Base\Elements_Iteration_Actions\Assets;
 use Elementor\Core\Common\Modules\Ajax\Module as Ajax;
-use Elementor\Core\Files\CSS\Global_CSS;
 use Elementor\Core\Files\CSS\Post as Post_CSS;
 use Elementor\Core\Page_Assets\Data_Managers\Base as Page_Assets_Data_Manager;
 use Elementor\Core\Responsive\Files\Frontend;
@@ -37,12 +37,12 @@ class Manager {
 		$this->register_actions();
 	}
 
-	public function get( $class, $args ) {
-		$id = $class . '-' . wp_json_encode( $args );
+	public function get( $class_name, $args ) {
+		$id = $class_name . '-' . wp_json_encode( $args );
 
 		if ( ! isset( $this->files[ $id ] ) ) {
 			// Create an instance from dynamic args length.
-			$reflection_class = new \ReflectionClass( $class );
+			$reflection_class = new \ReflectionClass( $class_name );
 			$this->files[ $id ] = $reflection_class->newInstanceArgs( $args );
 		}
 
@@ -114,8 +114,8 @@ class Manager {
 
 		delete_post_meta_by_key( Post_CSS::META_KEY );
 		delete_post_meta_by_key( Document_Base::CACHE_META_KEY );
+		delete_post_meta_by_key( Assets::ASSETS_META_KEY );
 
-		delete_option( Global_CSS::META_KEY );
 		delete_option( Frontend::META_KEY );
 
 		$this->reset_assets_data();
@@ -131,6 +131,10 @@ class Manager {
 	}
 
 	public function clear_custom_image_sizes() {
+		if ( ! defined( 'BFITHUMB_UPLOAD_DIR' ) ) {
+			return;
+		}
+
 		$upload_info = wp_upload_dir();
 		$upload_dir = $upload_info['basedir'] . '/' . BFITHUMB_UPLOAD_DIR;
 
@@ -189,6 +193,8 @@ class Manager {
 		add_action( 'update_option_siteurl', function () {
 			$this->reset_assets_data();
 		} );
+
+		add_action( 'rest_api_init', [ $this, 'register_endpoints' ] );
 	}
 
 	/**
@@ -201,5 +207,73 @@ class Manager {
 	 */
 	private function reset_assets_data() {
 		delete_option( Page_Assets_Data_Manager::ASSETS_DATA_KEY );
+	}
+
+	/**
+	 * Generate CSS.
+	 *
+	 * Generates CSS for all posts built with Elementor.
+	 *
+	 * @since 3.25.0
+	 * @access public
+	 */
+	public function generate_css() {
+		$batch_size = apply_filters( 'elementor/core/files/generate_css/batch_size', 100 );
+		$processed_posts = 0;
+
+		while ( true ) {
+			$args = [
+				'post_type' => get_post_types(),
+				'posts_per_page' => $batch_size,
+				'meta_query' => [
+					[
+						'key' => Document_Base::BUILT_WITH_ELEMENTOR_META_KEY,
+						'compare' => 'EXISTS',
+					],
+				],
+				'offset' => $processed_posts,
+				'fields' => 'ids',
+			];
+
+			$query = new \WP_Query( $args );
+
+			if ( empty( $query->posts ) ) {
+				break;
+			}
+
+			foreach ( $query->posts as $post_id ) {
+				$document = Plugin::$instance->documents->get_doc_for_frontend( $post_id );
+
+				if ( $document ) {
+					$css_file = Post_CSS::create( $post_id );
+					$css_file->update();
+				}
+			}
+
+			$processed_posts += $batch_size;
+		}
+
+		/**
+		 * Elementor Generate CSS files.
+		 *
+		 * Fires after Elementor generates new CSS files
+		 *
+		 * @since 3.25.0
+		 */
+		do_action( 'elementor/core/files/after_generate_css' );
+	}
+
+	public function register_endpoints() {
+		register_rest_route(
+			'elementor/v1',
+			'/cache',
+			[
+				'methods' => \WP_REST_Server::DELETABLE,
+				'callback' => [ $this, 'clear_cache' ],
+				'permission_callback' => function() {
+					return current_user_can( 'manage_options' );
+				},
+			]
+		);
 	}
 }

@@ -1,0 +1,18 @@
+@use "wp-admin-colors";
+
+.ui-dialog {
+
+	//In WordPress the "Cancel" option is usually on the left side,
+	//but AME historically puts it on the right.
+	.ui-dialog-buttonpane {
+		background-color: #fcfcfc;
+		border-top: 1px solid wp-admin-colors.wpColor(gray-5);
+		padding: 8px;
+		text-align: right;
+
+		//Move the confirmation button to the left.
+		.button-primary, .ame-dialog-confirm-button{
+			float: left;
+		}
+	}
+}

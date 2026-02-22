@@ -2,6 +2,7 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Builders;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Controls\Tooltip;
 use YahnisElsts\AdminMenuEditor\Customizable\Controls\UiElement;
 
 /**
@@ -19,12 +20,18 @@ abstract class BaseElementBuilder implements ElementBuilder {
 	protected $elementClass;
 
 	/**
+	 * @var array<ElementBuilder|UiElement|array>
+	 */
+	protected $children = array();
+
+	/**
 	 * @param class-string<\YahnisElsts\AdminMenuEditor\Customizable\Controls\UiElement> $elementClass
 	 * @param array $params
 	 */
-	protected function __construct($elementClass, $params = array()) {
+	protected function __construct($elementClass, $params = array(), $children = array()) {
 		$this->elementClass = $elementClass;
 		$this->params = $params;
+		$this->children = $children;
 	}
 
 	protected static function buildItems($items, $preserveKeys = false) {
@@ -72,6 +79,11 @@ abstract class BaseElementBuilder implements ElementBuilder {
 		return $this;
 	}
 
+	public function tooltip($html, $type = Tooltip::DEFAULT_TYPE) {
+		$this->params['tooltip'] = new Tooltip($html, $type);
+		return $this;
+	}
+
 	public function classes(...$cssClassNames) {
 		return $this->addItemsToArrayParam('classes', $cssClassNames);
 	}
@@ -116,6 +128,10 @@ abstract class BaseElementBuilder implements ElementBuilder {
 		return $this;
 	}
 
+	public function getParam($name, $default = null) {
+		return $this->params[$name] ?? $default;
+	}
+
 	/**
 	 * Render the element only if the condition evaluates to true.
 	 *
@@ -124,6 +140,32 @@ abstract class BaseElementBuilder implements ElementBuilder {
 	public function onlyIf($condition) {
 		$this->params['renderCondition'] = $condition;
 		return $this;
+	}
+
+	/**
+	 * @param ElementBuilder|UiElement ...$children
+	 * @return $this
+	 */
+	public function add(...$children) {
+		return $this->addAll($children);
+	}
+
+	/**
+	 * @param array<ElementBuilder|UiElement> $children
+	 * @return $this
+	 */
+	public function addAll(array $children) {
+		foreach ($children as $child) {
+			$this->children[] = $child;
+		}
+		return $this;
+	}
+
+	/**
+	 * @return UiElement[]
+	 */
+	protected function buildChildren(): array {
+		return self::buildItems($this->children);
 	}
 
 	/**

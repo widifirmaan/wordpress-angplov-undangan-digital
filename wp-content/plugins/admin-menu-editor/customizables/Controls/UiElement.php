@@ -3,6 +3,8 @@
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
+use YahnisElsts\AdminMenuEditor\Customizable\Settings\AbstractSetting;
 
 abstract class UiElement {
 	/**
@@ -11,7 +13,7 @@ abstract class UiElement {
 	protected $id = '';
 
 	/**
-	 * @var string|callable
+	 * @var string|callable|null
 	 */
 	protected $description = '';
 
@@ -26,6 +28,11 @@ abstract class UiElement {
 	 * @var array List of CSS styles to apply to the outermost DOM node of the element.
 	 */
 	protected $styles = array();
+
+	/**
+	 * @var UiElement[]
+	 */
+	protected $children = [];
 
 	protected $renderCondition = true;
 
@@ -42,7 +49,12 @@ abstract class UiElement {
 	 */
 	protected $declinesExternalLineBreaks = false;
 
-	public function __construct($params = array()) {
+	/**
+	 * @var null|Tooltip
+	 */
+	protected $tooltip = null;
+
+	public function __construct($params = [], $children = []) {
 		if ( !empty($params['id']) ) {
 			$this->id = $params['id'];
 		}
@@ -58,6 +70,21 @@ abstract class UiElement {
 		if ( isset($params['renderCondition']) ) {
 			$this->renderCondition = $params['renderCondition'];
 		}
+		if ( isset($params['tooltip']) ) {
+			$this->tooltip = $params['tooltip'];
+		}
+
+		foreach ($children as $child) {
+			$this->add($child);
+		}
+	}
+
+	/**
+	 * @param UiElement $child
+	 * @return void
+	 */
+	public function add(UiElement $child) {
+		$this->children[] = $child;
 	}
 
 	/**
@@ -67,17 +94,24 @@ abstract class UiElement {
 		return $this->id;
 	}
 
+	public function getHtmlIdBase(?Context $context = null) {
+		return $this->getId();
+	}
+
 	/**
 	 * @return string
 	 */
-	public function getDescription() {
+	public function getDescription(?Context $context = null) {
 		if ( is_string($this->description) ) {
 			return $this->description;
 		} elseif ( is_callable($this->description) ) {
 			return call_user_func($this->description);
-		} else {
+		} elseif ( isset($this->description) ) {
 			return strval($this->description);
+		} else if ( !empty($this->mainBinding) ) {
+			$this->description = $this->mainBinding->resolveDescription($context);
 		}
+		return '';
 	}
 
 	/**
@@ -85,6 +119,20 @@ abstract class UiElement {
 	 */
 	public function getClasses() {
 		return $this->classes;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function hasTooltip() {
+		return ($this->tooltip !== null);
+	}
+
+	/**
+	 * @return Tooltip|null
+	 */
+	public function getTooltip() {
+		return $this->tooltip;
 	}
 
 	protected function buildTag($tagName, $attributes = array(), $content = null) {
@@ -105,25 +153,39 @@ abstract class UiElement {
 		return (bool)$this->renderCondition;
 	}
 
-	public function serializeForJs() {
-		$description = $this->getDescription();
+	public function serializeForJs(Context $context): array {
 		$result = ['t' => $this->getJsUiElementType()];
-		if ( !empty($this->classes) ) {
-			$result['classes'] = $this->classes;
-		}
-		if ( !empty($this->styles) ) {
-			$result['styles'] = $this->styles;
-		}
-		if ( !empty($description) ) {
-			$result['description'] = $description;
-		}
+
 		if ( !empty($this->id) ) {
 			$result['id'] = $this->id;
 		}
 
 		$params = $this->getKoComponentParams();
+
+		if ( !empty($this->classes) ) {
+			$params['classes'] = $this->classes;
+		}
+		if ( !empty($this->styles) ) {
+			$params['styles'] = $this->styles;
+		}
+		$description = $this->getDescription();
+		if ( !empty($description) ) {
+			$params['description'] = $description;
+		}
+
+		if ( $this->hasTooltip() ) {
+			$params['tooltip'] = $this->tooltip->serializeForJs();
+		}
+
 		if ( !empty($params) ) {
 			$result['params'] = $params;
+		}
+
+		if ( !empty($this->children) ) {
+			$result['children'] = [];
+			foreach ($this->children as $child) {
+				$result['children'][] = $child->serializeForJs($context);
+			}
 		}
 
 		return $result;
@@ -131,12 +193,36 @@ abstract class UiElement {
 
 	abstract protected function getJsUiElementType();
 
+	protected static function serializeBindingForJs(Binding $binding, Context $context) {
+		if ( $binding instanceof AbstractSetting ) {
+			return $binding->getId();
+		} else {
+			$option = $context->resolveBinding($binding);
+			if ( $option->isDefined() ) {
+				$resolution = $option->get();
+				return (object)[
+					'bind' => $resolution->serializeForJs(),
+				];
+			}
+			return (object)['bind' => $binding->getBindingString()];
+		}
+	}
+
+	/**
+	 * Recursively get all settings referenced by this element and its descendants.
+	 *
+	 * @param Context $context Used to resolve bindings.
+	 */
+	public function getAllReferencedSettings(Context $context) {
+		return [];
+	}
+
 	/**
 	 * Get additional parameters for the Knockout component that renders this element.
 	 *
 	 * @return array
 	 */
-	protected function getKoComponentParams() {
+	protected function getKoComponentParams(): array {
 		return [];
 	}
 

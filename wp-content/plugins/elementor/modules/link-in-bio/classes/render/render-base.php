@@ -35,7 +35,7 @@ abstract class Render_Base {
 		$image_links_columns_value = $this->settings['image_links_per_row'] ?? 2;
 
 		/**
-		 * if empty returns a sub-array with all empty values
+		 * If empty returns a sub-array with all empty values
 		 * Check for this here to avoid rendering container when empty
 		 */
 		$image_links_value = $this->clean_array( $image_links_value_initial );
@@ -97,7 +97,7 @@ abstract class Render_Base {
 						] );
 						?>
 						<img <?php echo $this->widget->get_render_attribute_string( 'image-links-img-' . $key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
-					<?php }; ?>
+					<?php } ?>
 				</a>
 			<?php } ?>
 		</div>
@@ -197,7 +197,7 @@ abstract class Render_Base {
 								] );
 								?>
 								<img <?php echo $this->widget->get_render_attribute_string( 'cta-link-image' . $key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
-							<?php }; ?>
+							<?php } ?>
 						</span>
 					<?php endif; ?>
 					<span class="e-link-in-bio__cta-text">
@@ -427,7 +427,7 @@ abstract class Render_Base {
 								?>
 								<img <?php echo $this->widget->get_render_attribute_string( 'identity_image_src' . $image_key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 
-							<?php }; ?>
+							<?php } ?>
 							<?php
 							if ( ! empty( $image['props']['has_shape_divider'] ) ) {
 								$this->print_shape_divider();

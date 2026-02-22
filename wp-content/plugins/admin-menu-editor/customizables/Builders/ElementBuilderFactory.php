@@ -7,10 +7,12 @@ use YahnisElsts\AdminMenuEditor\Customizable\Controls\UiElement;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings\Setting;
 use YahnisElsts\AdminMenuEditor\Customizable\Storage\AbstractSettingsDictionary;
+use YahnisElsts\AdminMenuEditor\ProCustomizable\Controls\ActorFeatureCheckbox;
 use YahnisElsts\AdminMenuEditor\ProCustomizable\Controls\BackgroundPositionSelector;
 use YahnisElsts\AdminMenuEditor\ProCustomizable\Controls\BackgroundRepeat;
 use YahnisElsts\AdminMenuEditor\ProCustomizable\Controls\BoxDimensions;
 use YahnisElsts\AdminMenuEditor\ProCustomizable\Controls\FontStylePicker;
+use YahnisElsts\AdminMenuEditor\Customizable\Schemas;
 
 class ElementBuilderFactory {
 	/**
@@ -18,7 +20,7 @@ class ElementBuilderFactory {
 	 */
 	protected $settingLookup = null;
 
-	public function __construct(AbstractSettingsDictionary $settingLookup = null) {
+	public function __construct(?AbstractSettingsDictionary $settingLookup = null) {
 		$this->settingLookup = $settingLookup;
 	}
 
@@ -118,6 +120,14 @@ class ElementBuilderFactory {
 
 	/**
 	 * @param Setting|null|string $idOrSetting
+	 * @return ControlBuilder
+	 */
+	public function checkBoxGroup($idOrSetting = null): ControlBuilder {
+		return $this->initControlBuilder(Controls\CheckBoxGroup::class, $idOrSetting);
+	}
+
+	/**
+	 * @param Setting|null|string $idOrSetting
 	 * @return ControlBuilder<\YahnisElsts\AdminMenuEditor\Customizable\Controls\SelectBox>
 	 */
 	public function select($idOrSetting = null) {
@@ -185,6 +195,10 @@ class ElementBuilderFactory {
 		return $this->initControlBuilder(BoxDimensions::class, $idOrSetting);
 	}
 
+	public function actorFeatureCheckbox($idOrSetting = null): ControlBuilder {
+		return $this->initControlBuilder(ActorFeatureCheckbox::class, $idOrSetting);
+	}
+
 	/**
 	 * Automatically choose a suitable control or container for the given setting.
 	 *
@@ -204,6 +218,26 @@ class ElementBuilderFactory {
 			return $this->number($setting);
 		} else if ( $setting instanceof Settings\PredefinedSet ) {
 			return $this->autoSection($setting);
+		} else if ( $setting instanceof Settings\WithSchema\SingularSetting ) {
+
+			//Decide based on the schema.
+			$schema = $setting->getSchema();
+			if ( $schema instanceof Schemas\Boolean ) {
+				return $this->toggleCheckBox($setting)->onValue(true)->offValue(false);
+			} else if ( $schema instanceof Schemas\Enum ) {
+				return $this->radioGroup($setting);
+			} else if ( $schema instanceof Schemas\Color ) {
+				return $this->colorPicker($setting);
+			} else if ( $schema instanceof Schemas\Url ) {
+				return $this->textBox($setting)->type('url')->code();
+			} else if ( $schema instanceof Schemas\StringSchema ) {
+				return $this->textBox($setting);
+			} else if ( $schema instanceof Schemas\Number ) {
+				return $this->number($setting);
+			} else {
+				return $this->textBox($setting);
+			}
+
 		} else if ( $setting instanceof Settings\AbstractSetting ) {
 			switch ($setting->getDataType()) {
 				case 'color':
@@ -305,6 +339,9 @@ class ElementBuilderFactory {
 				$settings[$key] = !empty($found) ? reset($found) : null;
 			}
 			return $settings;
+		} else if ( $idOrSetting instanceof Controls\Binding ) {
+			//This can be a reference that will be resolved later.
+			return [$idOrSetting];
 		}
 		throw new \InvalidArgumentException(sprintf(
 			'Invalid setting query (type: "%s"). Input must be a Setting, a string, or NULL.',

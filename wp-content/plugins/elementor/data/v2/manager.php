@@ -6,7 +6,7 @@ use Elementor\Data\V2\Base\Processor;
 use Elementor\Data\V2\Base\Controller;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 /**
@@ -97,7 +97,6 @@ class Manager extends BaseModule {
 	 *
 	 * @param string $command
 	 * @param string $format
-	 *
 	 */
 	public function register_endpoint_format( $command, $format ) {
 		$this->command_formats[ $command ] = untrailingslashit( $format );
@@ -135,7 +134,7 @@ class Manager extends BaseModule {
 	 * Command extract args.
 	 *
 	 * @param string $command
-	 * @param array $args
+	 * @param array  $args
 	 *
 	 * @return \stdClass
 	 */
@@ -243,8 +242,8 @@ class Manager extends BaseModule {
 	/**
 	 * Run processor.
 	 *
-	 * @param \Elementor\Data\V2\Base\Processor $processor
-	 * @param array $data
+	 * @param Processor $processor
+	 * @param array     $data
 	 *
 	 * @return mixed
 	 */
@@ -261,9 +260,9 @@ class Manager extends BaseModule {
 	 *
 	 * Filter them by class.
 	 *
-	 * @param \Elementor\Data\V2\Base\Processor[] $processors
-	 * @param string $filter_by_class
-	 * @param array $data
+	 * @param Processor[] $processors
+	 * @param string      $filter_by_class
+	 * @param array       $data
 	 *
 	 * @return false|array
 	 */
@@ -294,17 +293,17 @@ class Manager extends BaseModule {
 	 * Use args as query.
 	 *
 	 * @param string $endpoint
-	 * @param array $args
+	 * @param array  $args
 	 * @param string $method
-	 * @param string $namespace (optional)
-	 * @param string $version (optional)
+	 * @param string $name_space Optional.
+	 * @param string $version    Optional.
 	 *
 	 * @return \WP_REST_Response
 	 */
-	public function run_request( $endpoint, $args = [], $method = \WP_REST_Server::READABLE, $namespace = self::ROOT_NAMESPACE, $version = self::VERSION ) {
+	public function run_request( $endpoint, $args = [], $method = \WP_REST_Server::READABLE, $name_space = self::ROOT_NAMESPACE, $version = self::VERSION ) {
 		$this->run_server();
 
-		$endpoint = '/' . $namespace . '/v' . $version . '/' . trim( $endpoint, '/' );
+		$endpoint = '/' . $name_space . '/v' . $version . '/' . trim( $endpoint, '/' );
 
 		// Run reset api.
 		$request = new \WP_REST_Request( $method, $endpoint );
@@ -324,7 +323,7 @@ class Manager extends BaseModule {
 	 * Wrapper for `$this->run_request` return `$response->getData()` instead of `$response`.
 	 *
 	 * @param string $endpoint
-	 * @param array $args
+	 * @param array  $args
 	 * @param string $method
 	 *
 	 * @return array

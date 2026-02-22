@@ -5,7 +5,7 @@ use Elementor\Core\Common\Modules\Finder\Base_Category;
 use Elementor\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 /**
@@ -83,7 +83,11 @@ class Create extends Base_Category {
 		}
 
 		return $this->get_create_new_template(
-			sprintf( __( 'Add New %s', 'elementor' ), $post_type_object->labels->singular_name ),
+			sprintf(
+				/* translators: %s: Post type singular name. */
+				__( 'Add New %s', 'elementor' ),
+				$post_type_object->labels->singular_name
+			),
 			Plugin::$instance->documents->get_create_new_post_url( $post_type )
 		);
 	}

@@ -237,7 +237,13 @@ function cdp_configuration() {
                   </tr>
                   <tr>
                       <td><label class="cdp-relative"><input <?php echo $defaults['slug']=='true'?'checked ':''; ?>class="cdp-data-set" data-cdp-opt="slug" type="checkbox" /><span><?php _e('Slug', 'copy-delete-posts'); ?> <span class="cdp-info-icon"></span></span></label></td>
-                      <td><?php _e('…get the same <a href="https://kinsta.com/knowledgebase/wordpress-slug/" target="_blank"><span class="cdp-green">slug</span></a> of the original. (However after publishing it will give it automatically a new slug because 2 pages cannot be on the same URL).', 'copy-delete-posts'); ?></td>
+                       <td><?php
+                      echo sprintf(
+                        __('…get the same %sslug%s of the original + the incremental number. To takeover the original slug, enable %sthis option%s.', 'copy-delete-posts'),
+                        '<a href="https://kinsta.com/knowledgebase/wordpress-slug/" target="_blank"><span class="cdp-green">', '</span></a>',
+                        '<a href="#" class="cdp-go-to-slug-additional"><span class="cdp-green">', '</span></a>'
+                      )
+                       ?></td>
                       <td><?php _e('…get a blank slug, unless the page is published, then it will generate it automatically.', 'copy-delete-posts'); ?></td>
                   </tr>
                   <tr>
@@ -257,7 +263,7 @@ function cdp_configuration() {
                   </tr>
                   <tr>
                       <td><label class="cdp-relative"><input <?php echo $defaults['template']=='true'?'checked ':''; ?>class="cdp-data-set" data-cdp-opt="template" type="checkbox" /><span><?php _e('Template', 'copy-delete-posts'); ?> <span class="cdp-info-icon"></span></span></label></td>
-                      <td><?php _e('…get the same page <a href="https://wpapprentice.com/blog/wordpress-theme-vs-template/" target="_blank"><span class="cdp-green">template</span></a> as original.', 'copy-delete-posts'); ?></td>
+                      <td><?php _e('…get the same page <a href="https://wordpress.com/support/templates/" target="_blank"><span class="cdp-green">template</span></a> as original.', 'copy-delete-posts'); ?></td>
                       <td><?php _e('…get the default page template.', 'copy-delete-posts'); ?></td>
                   </tr>
                   <tr>
@@ -508,7 +514,7 @@ function cdp_configuration() {
 
         <!-- GLOBAL SECTION -->
         <div class="cdp-collapsible" data-cdp-group="mains">
-          <div class="cdp-collapsible-title" id="cdp-global-section-collapser">
+          <div class="cdp-collapsible-title cdp-other-options-section-cnx" id="cdp-global-section-collapser">
             <div class="cdp-cf">
                 <div class="cdp-left cdp-ff-b1"><?php _e('<b class="cdp-ff-b4">Other</b> options', 'copy-delete-posts'); ?></div>
               <div class="cdp-right"><i class="cdp-arrow cdp-arrow-left"></i></div>
@@ -622,10 +628,14 @@ function cdp_configuration() {
 
               <div><h2><b class="cdp-f-s-18 cdp-f-w-bold"><?php _e('Additional features', 'copy-delete-posts'); ?></b></h2></div>
               <div class="cdp-p-25-40 cdp-f-s-18 cdp-f-w-light">
+                <label for="cdp-o-take-over-original-slug">
+                  <input <?php echo (isset($gos['cdp-take-over-original-slug']) && $gos['cdp-take-over-original-slug'] == 'true')?'checked ':''; ?>id="cdp-o-take-over-original-slug" type="checkbox" class="cdp-other-inputs" name="cdp-take-over-original-slug">
+                    <?php _e('Force copied posts to use the <b>original slug</b> (the original post will receive the <b>“-old”</b> slug suffix).', 'copy-delete-posts'); ?>
+                </label>
                 <label for="cdp-o-premium-hide-tooltip">
                   <?php if (!isset($gos['cdp-premium-hide-tooltip'])) $gos['cdp-premium-hide-tooltip'] = false; ?>
                   <input id="cdp-o-premium-hide-tooltip"<?php echo ((!$areWePro)?' disabled="true"':''); ?> <?php echo ($areWePro && $gos['cdp-premium-hide-tooltip'] == 'true')?'checked ':''; ?> type="checkbox" class="cdp-other-inputs" name="cdp-premium-hide-tooltip" />
-                  <span class="cdp-relative cdp-tooltip-premium" data-top="5"><?php _e('Hide copy tooltip on hover and only show the button', 'copy-delete-posts'); ?> <span class="cdp-premium-icon cdp-big-icon" style="right: -30px"></span></span>
+                  <span class="cdp-relative cdp-tooltip-premium" data-top="5"><?php _e('Hide the <b>Copy tooltip</b> on hover and display only the Copy button on the Posts/Pages dashboard screens.', 'copy-delete-posts'); ?> <span class="cdp-premium-icon cdp-big-icon" style="right: -30px"></span></span>
                 </label>
                 <?php if (is_multisite() || !$areWePro) { ?>
                 <label for="cdp-o-premium-replace-domain">
@@ -637,12 +647,17 @@ function cdp_configuration() {
                 <label for="cdp-o-premium-import">
                   <?php if (!isset($gos['cdp-premium-import'])) $gos['cdp-premium-import'] = false; ?>
                   <input id="cdp-o-premium-import"<?php echo ((!$areWePro)?' disabled="true"':''); ?> <?php echo ($areWePro && $gos['cdp-premium-import'] == 'true')?'checked ':''; ?> type="checkbox" class="cdp-other-inputs" name="cdp-premium-import" />
-                  <span class="cdp-relative cdp-tooltip-premium" data-top="5"><?php _e('Show post export & import buttons', 'copy-delete-posts'); ?> <span class="cdp-premium-icon cdp-big-icon" style="right: -30px"></span></span>
+                  <span class="cdp-relative cdp-tooltip-premium" data-top="5"><?php _e('Enable the <b>Export and Import</b> buttons on the Posts/Pages dashboard screens.', 'copy-delete-posts'); ?> <span class="cdp-premium-icon cdp-big-icon" style="right: -30px"></span></span>
                 </label>
                 <label for="cdp-o-menu-in-settings">
                   <input <?php echo (isset($gos['cdp-menu-in-settings']) && $gos['cdp-menu-in-settings'] == 'true')?'checked ':''; ?>id="cdp-o-menu-in-settings" type="checkbox" class="cdp-other-inputs" name="cdp-menu-in-settings">
-                  <?php _e('Move <b>Copy & Delete Posts</b> <u>menu item</u> under <b>Tools</b> dropdown', 'copy-delete-posts'); ?>
+                  <?php _e('Move the Copy & Delete Posts dashboard menu item to the <b>Tools</b> section.', 'copy-delete-posts'); ?>
                 </label>
+                  <label for="cdp-o-delete-on-uninstall">
+                    <input <?php echo (isset($gos['cdp-delete-on-uninstall']) && $gos['cdp-delete-on-uninstall'] == 'true')?'checked ':''; ?>id="cdp-o-delete-on-uninstall" type="checkbox" class="cdp-other-inputs" name="cdp-delete-on-uninstall">
+                    <?php _e('<b>Remove</b> all plugin <b>settings</b> upon uninstallation (you will need to reconfigure them if the plugin is reinstalled).', 'copy-delete-posts'); ?>
+                  </label>
+
               </div>
               <div class="cdp-center cdp-padding-15-h">
                   <button class="cdp-button cdp-save-options"><?php _e('Save', 'copy-delete-posts'); ?></button>

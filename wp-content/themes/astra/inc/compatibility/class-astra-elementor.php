@@ -5,11 +5,13 @@
  * @package Astra
  */
 
-namespace Elementor;// phpcs:ignore PHPCompatibility.Keywords.NewKeywords.t_namespaceFound, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound
+// phpcs:disable PHPCompatibility.Keywords.NewKeywords.t_namespaceFound, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound
+
+namespace Elementor;
 
 // @codingStandardsIgnoreStart PHPCompatibility.Keywords.NewKeywords.t_useFound
-use Astra_Global_Palette;
 use Astra_Dynamic_CSS;
+use Astra_Global_Palette;
 use Elementor\Core\Settings\Manager as SettingsManager;
 // @codingStandardsIgnoreEnd PHPCompatibility.Keywords.NewKeywords.t_useFound
 
@@ -21,7 +23,7 @@ if ( ! class_exists( '\Elementor\Plugin' ) ) {
 /**
  * Astra Elementor Compatibility
  */
-if ( ! class_exists( 'Astra_Elementor' ) ) :
+if ( ! class_exists( 'Astra_Elementor' ) ) {
 
 	/**
 	 * Astra Elementor Compatibility
@@ -29,7 +31,6 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 	 * @since 1.0.0
 	 */
 	class Astra_Elementor {
-
 		/**
 		 * Member Variable
 		 *
@@ -51,7 +52,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 		 * Constructor
 		 */
 		public function __construct() {
-			add_action( 'wp', array( $this, 'elementor_default_setting' ), 20 );
+			add_action( 'elementor/documents/register_controls', array( $this, 'elementor_default_setting' ) );
 			add_action( 'elementor/preview/init', array( $this, 'elementor_default_setting' ) );
 			add_action( 'elementor/preview/enqueue_styles', array( $this, 'elementor_overlay_zindex' ) );
 			add_action( 'elementor/editor/before_enqueue_scripts', array( $this, 'elementor_add_scripts' ) );
@@ -75,7 +76,6 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 			add_filter( 'astra_entry_header_class', array( $this, 'astra_entry_header_class_custom' ), 1, 99 );
 		}
 
-
 		/**
 		 * Astra post layout 2 disable compatibility.
 		 *
@@ -83,7 +83,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 		 *
 		 * @since 4.1.0
 		 */
-		function astra_entry_header_class_custom( $classes ) {
+		public function astra_entry_header_class_custom( $classes ) {
 			$edit_mode         = get_post_meta( astra_get_post_id(), '_elementor_edit_mode', true );
 			$astra_layout_type = astra_get_option( 'ast-dynamic-single-' . get_post_type() . '-layout', 'layout-1' );
 
@@ -176,7 +176,6 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 				}
 				$parse_css .= astra_parse_css( $elementor_rtl_support_css );
 
-
 				$dynamic_css .= $parse_css;
 			}
 
@@ -186,7 +185,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 					'width' => '100%',
 				),
 			);
-			
+
 			$dynamic_css .= astra_parse_css( $elementor_posts_container_css );
 
 			$elementor_archive_page_css = array(
@@ -224,7 +223,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 		 */
 		public function elementor_default_setting() {
 
-			if ( false === astra_enable_page_builder_compatibility() || 'post' == get_post_type() ) {
+			if ( false === astra_enable_page_builder_compatibility() || 'post' === get_post_type() ) {
 				return;
 			}
 
@@ -242,19 +241,33 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 				if ( empty( $post->post_content ) && $this->is_elementor_activated( $id ) ) {
 
 					update_post_meta( $id, '_astra_content_layout_flag', 'disabled' );
+
+					/**
+					 * Filter to use default settings instead of applying Elementor-specific modifications.
+					 *
+					 * @param bool $use_default_settings Default false. When true, skip all Elementor modifications.
+					 * @param int  $post_id              Current post ID.
+					 * @since 4.11.11
+					 */
+					$use_default_settings = apply_filters( 'astra_elementor_use_default_settings', false, $id );
+
+					if ( $use_default_settings ) {
+						return;
+					}
+
 					update_post_meta( $id, 'site-post-title', 'disabled' );
 					update_post_meta( $id, 'ast-title-bar-display', 'disabled' );
 					update_post_meta( $id, 'ast-featured-img', 'disabled' );
 
 					// Compatibility with revamped layouts to update default layout to page builder.
-					$migrated_user = ( ! Astra_Dynamic_CSS::astra_fullwidth_sidebar_support() );
+					$migrated_user = ! Astra_Dynamic_CSS::astra_fullwidth_sidebar_support();
 					if ( $migrated_user ) {
 						$content_layout = get_post_meta( $id, 'site-content-layout', true );
 					} else {
 						$content_layout = get_post_meta( $id, 'ast-site-content-layout', true );
 					}
 
-					if ( empty( $content_layout ) || 'default' == $content_layout ) {
+					if ( empty( $content_layout ) || 'default' === $content_layout ) {
 						if ( $migrated_user ) {
 							update_post_meta( $id, 'site-content-layout', 'page-builder' );
 						}
@@ -262,21 +275,21 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 					}
 
 					$sidebar_layout = get_post_meta( $id, 'site-sidebar-layout', true );
-					if ( empty( $sidebar_layout ) || 'default' == $sidebar_layout ) {
+					if ( empty( $sidebar_layout ) || 'default' === $sidebar_layout ) {
 						update_post_meta( $id, 'site-sidebar-layout', 'no-sidebar' );
 					}
 
 					// In the preview mode, Apply the layouts using filters for Elementor Template Library.
 					add_filter(
 						'astra_page_layout',
-						function() { // phpcs:ignore PHPCompatibility.FunctionDeclarations.NewClosure.Found
+						static function() { // phpcs:ignore PHPCompatibility.FunctionDeclarations.NewClosure.Found
 							return 'no-sidebar';
 						}
 					);
 
 					add_filter(
 						'astra_get_content_layout',
-						function () { // phpcs:ignore PHPCompatibility.FunctionDeclarations.NewClosure.Found
+						static function () { // phpcs:ignore PHPCompatibility.FunctionDeclarations.NewClosure.Found
 							return 'page-builder';
 						}
 					);
@@ -317,19 +330,19 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 		 * Check is elementor activated.
 		 *
 		 * @param int $id Post/Page Id.
-		 * @return boolean
+		 * @return bool
 		 */
 		public function is_elementor_activated( $id ) {
 			if ( version_compare( ELEMENTOR_VERSION, '1.5.0', '<' ) ) {
-				return ( 'builder' === Plugin::$instance->db->get_edit_mode( $id ) );
-			} else {
-				$document = Plugin::$instance->documents->get( $id );
-				if ( $document ) {
-					return $document->is_built_with_elementor();
-				} else {
-					return false;
-				}
+				return 'builder' === Plugin::$instance->db->get_edit_mode( $id );
 			}
+
+			$document = Plugin::$instance->documents->get( $id );
+			if ( $document ) {
+				return $document->is_built_with_elementor();
+			}
+
+			return false;
 		}
 
 		/**
@@ -337,10 +350,10 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 		 *
 		 * @since  1.2.7
 		 *
-		 * @return boolean True IF Elementor Editor is loaded, False If Elementor Editor is not loaded.
+		 * @return bool True IF Elementor Editor is loaded, False If Elementor Editor is not loaded.
 		 */
 		private function is_elementor_editor() {
-			if ( ( isset( $_REQUEST['action'] ) && 'elementor' == $_REQUEST['action'] ) || isset( $_REQUEST['elementor-preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( ( isset( $_REQUEST['action'] ) && 'elementor' === $_REQUEST['action'] ) || isset( $_REQUEST['elementor-preview'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				return true;
 			}
 
@@ -364,7 +377,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 				return $response;
 			}
 
-			if ( '/elementor/v1/globals' != $route ) {
+			if ( '/elementor/v1/globals' !== $route ) {
 				return $response;
 			}
 
@@ -425,15 +438,14 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 				return $response;
 			}
 
-			$colors   = astra_get_option( 'global-color-palette' );
-			$response = rest_ensure_response(
+			$colors = astra_get_option( 'global-color-palette' );
+			return rest_ensure_response(
 				array(
 					'id'    => esc_attr( $rest_id ),
 					'title' => Astra_Global_Palette::get_css_variable_prefix() . esc_html( $slug_map[ $rest_id ] ),
 					'value' => $colors['palette'][ $slug_map[ $rest_id ] ],
 				)
 			);
-			return $response;
 		}
 
 		/**
@@ -467,7 +479,7 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 			$is_site_rtl = is_rtl();
 			$ltr_left    = $is_site_rtl ? 'right' : 'left';
 			$ltr_right   = $is_site_rtl ? 'left' : 'right';
-			if ( defined( 'ELEMENTOR_PRO_VERSION' ) && 'no' === get_option( 'elementor_' . 'use_mini_cart_template' ) ) {
+			if ( defined( 'ELEMENTOR_PRO_VERSION' ) && 'no' === get_option( 'elementor_use_mini_cart_template' ) ) {
 				$mini_cart_template_css = array(
 					'.woocommerce-js .woocommerce-mini-cart' => array(
 						'margin-inline-start' => '0',
@@ -539,13 +551,13 @@ if ( ! class_exists( 'Astra_Elementor' ) ) :
 
 			$editor_preferences = SettingsManager::get_settings_managers( 'editorPreferences' );
 			$theme              = $editor_preferences->get_model()->get_settings( 'ui_theme' );
-			$style              = 'dark' == $theme ? '-dark' : '';
+			$style              = 'dark' === $theme ? '-dark' : '';
 
 			wp_enqueue_style( 'astra-elementor-editor-style', ASTRA_THEME_URI . 'inc/assets/css/ast-elementor-editor' . $style . '.css', array(), ASTRA_THEME_VERSION );
 		}
 	}
 
-endif;
+}
 
 /**
  * Kicking this off by calling 'get_instance()' method

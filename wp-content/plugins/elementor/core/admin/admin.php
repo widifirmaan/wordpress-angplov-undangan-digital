@@ -3,17 +3,18 @@ namespace Elementor\Core\Admin;
 
 use Elementor\Api;
 use Elementor\Beta_Testers;
-use Elementor\Core\Admin\Menu\Main as MainMenu;
 use Elementor\App\Modules\Onboarding\Module as Onboarding_Module;
 use Elementor\Core\Base\App;
 use Elementor\Core\Upgrade\Manager as Upgrade_Manager;
 use Elementor\Core\Utils\Assets_Config_Provider;
 use Elementor\Core\Utils\Collection;
+use Elementor\Modules\FloatingButtons\Module as Floating_Buttons_Module;
 use Elementor\Plugin;
 use Elementor\Settings;
 use Elementor\User;
 use Elementor\Utils;
 use Elementor\Core\Utils\Hints;
+use Elementor\Core\DocumentTypes\Page;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -35,6 +36,34 @@ class Admin extends App {
 	 */
 	public function get_name() {
 		return 'admin';
+	}
+
+	/**
+	 * Check if current page is an Elementor admin page.
+	 *
+	 * @param \WP_Screen|null $current_screen Optional. Screen object to check. Defaults to current screen.
+	 *
+	 * @return bool Whether current page is an Elementor admin page.
+	 */
+	public static function is_elementor_admin_page( $current_screen = null ) {
+		if ( ! $current_screen ) {
+			$current_screen = get_current_screen();
+		}
+
+		if ( ! $current_screen ) {
+			return false;
+		}
+
+		$screen_id = $current_screen->id ?? '';
+		$post_type = $current_screen->post_type ?? '';
+
+		$is_elementor_screen = strpos( $screen_id, 'elementor' ) !== false
+			|| strpos( $screen_id, Floating_Buttons_Module::CPT_FLOATING_BUTTONS ) !== false;
+
+		$is_elementor_post_type = strpos( $post_type, 'elementor' ) !== false
+			|| strpos( $post_type, Floating_Buttons_Module::CPT_FLOATING_BUTTONS ) !== false;
+
+		return $is_elementor_screen || $is_elementor_post_type;
 	}
 
 	/**
@@ -167,11 +196,9 @@ class Admin extends App {
 	 * @access public
 	 */
 	public function enqueue_styles() {
-		$direction_suffix = is_rtl() ? '-rtl' : '';
-
 		wp_register_style(
 			'elementor-admin',
-			$this->get_css_assets_url( 'admin' . $direction_suffix ),
+			$this->get_css_assets_url( 'admin' ),
 			[
 				'elementor-common',
 			],
@@ -375,8 +402,8 @@ class Admin extends App {
 	public function plugin_row_meta( $plugin_meta, $plugin_file ) {
 		if ( ELEMENTOR_PLUGIN_BASE === $plugin_file ) {
 			$row_meta = [
-				'docs' => '<a href="https://go.elementor.com/docs-admin-plugins/" aria-label="' . esc_attr( esc_html__( 'View Elementor Documentation', 'elementor' ) ) . '" target="_blank">' . esc_html__( 'Docs & FAQs', 'elementor' ) . '</a>',
-				'ideo' => '<a href="https://go.elementor.com/yt-admin-plugins/" aria-label="' . esc_attr( esc_html__( 'View Elementor Video Tutorials', 'elementor' ) ) . '" target="_blank">' . esc_html__( 'Video Tutorials', 'elementor' ) . '</a>',
+				'docs' => '<a href="https://go.elementor.com/docs-admin-plugins/" aria-label="' . esc_attr__( 'View Elementor Documentation', 'elementor' ) . '" target="_blank">' . esc_html__( 'Docs & FAQs', 'elementor' ) . '</a>',
+				'ideo' => '<a href="https://go.elementor.com/yt-admin-plugins/" aria-label="' . esc_attr__( 'View Elementor Video Tutorials', 'elementor' ) . '" target="_blank">' . esc_html__( 'Video Tutorials', 'elementor' ) . '</a>',
 			];
 
 			$plugin_meta = array_merge( $plugin_meta, $row_meta );
@@ -482,7 +509,7 @@ class Admin extends App {
 		<div class="e-overview__header">
 			<?php if ( $show_versions ) { ?>
 				<div class="e-overview__logo">
-					<div class="e-logo-wrapper"><i class="eicon-elementor"></i></div>
+					<div class="e-logo-wrapper"><i class="eicon-elementor-circle"></i></div>
 				</div>
 				<div class="e-overview__versions">
 					<span class="e-overview__version"><?php echo esc_html__( 'Elementor', 'elementor' ); ?> v<?php echo ELEMENTOR_VERSION; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
@@ -511,7 +538,7 @@ class Admin extends App {
 	 * Fired by `elementor_dashboard_overview_widget` function.
 	 *
 	 * @param array $args
-	 * @param bool $show_heading
+	 * @param bool  $show_heading
 	 *
 	 * @return void
 	 * @since 3.12.0
@@ -547,7 +574,7 @@ class Admin extends App {
 	 * Displays the Elementor dashboard widget - news and updates section.
 	 * Fired by `elementor_dashboard_overview_widget` function.
 	 *
-	 * @param int $limit_feed
+	 * @param int  $limit_feed
 	 * @param bool $show_heading
 	 *
 	 * @return void
@@ -625,19 +652,10 @@ class Admin extends App {
 		];
 
 		$additions_actions = [];
-
-		if ( User::get_introduction_meta( 'ai_get_started' ) ) {
-			$additions_actions['ai-library'] = [
-				'title' => esc_html__( 'AI Prompts Library', 'elementor' ),
-				'link' => 'https://go.elementor.com/overview-ai-prompts-library/',
-			];
-		} else {
-			$additions_actions['ai'] = [
-				'title' => esc_html__( 'Build Smart with AI', 'elementor' ),
-				'link' => 'https://go.elementor.com/overview-widget-ai/',
-			];
-		}
-
+		$additions_actions['ai'] = [
+			'title' => esc_html__( 'Build Smart with AI', 'elementor' ),
+			'link' => 'https://go.elementor.com/overview-widget-ai/',
+		];
 		$additions_actions['go-pro'] = [
 			'title' => esc_html__( 'Upgrade', 'elementor' ),
 			'link' => 'https://go.elementor.com/go-pro-wp-overview-widget/',
@@ -701,6 +719,8 @@ class Admin extends App {
 
 		$post_data = Utils::get_super_global_value( $_GET, 'post_data' ) ?? [];
 
+		$post_data = $this->filter_post_data( $post_data );
+
 		/**
 		 * Create new post meta data.
 		 *
@@ -726,11 +746,112 @@ class Admin extends App {
 			wp_die( $document ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 
-		wp_redirect( $document->get_edit_url() );
+		wp_safe_redirect( $document->get_edit_url() );
 
 		die;
 	}
 
+	public function admin_action_site_settings_redirect() {
+		check_admin_referer( 'elementor_action_site_settings_redirect' );
+
+		if ( ! current_user_can( 'edit_theme_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'elementor' ) );
+		}
+
+		$active_tab = filter_input( INPUT_GET, 'active-tab', FILTER_SANITIZE_ENCODED );
+
+		$site_settings_url_config = Page::get_site_settings_url_config( $active_tab );
+
+		if ( empty( $site_settings_url_config['url'] ) ) {
+			wp_die( esc_html__( 'Unable to create or access Site Settings page.', 'elementor' ) );
+		}
+
+		wp_safe_redirect( $site_settings_url_config['url'] );
+
+		die;
+	}
+
+	/**
+	 * Admin action edit website.
+	 *
+	 * Redirects to the homepage edit URL if it exists and is built with Elementor,
+	 * otherwise redirects to create a new page.
+	 *
+	 * Fired by `admin_action_elementor_edit_website` action.
+	 *
+	 * @since 3.x.x
+	 * @access public
+	 */
+	public function admin_action_edit_website_redirect() {
+		check_admin_referer( 'elementor_action_edit_website' );
+
+		if ( ! User::is_current_user_can_edit_post_type( 'page' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'elementor' ) );
+		}
+
+		$homepage_id = $this->get_homepage_id();
+		$edit_url = $this->get_edit_website_url( $homepage_id );
+
+		wp_safe_redirect( $edit_url );
+
+		die;
+	}
+
+	private function get_homepage_id(): ?int {
+		if ( get_option( 'show_on_front' ) !== 'page' ) {
+			return null;
+		}
+
+		$homepage_id = get_option( 'page_on_front' );
+
+		return $homepage_id ? (int) $homepage_id : null;
+	}
+
+	private function get_edit_website_url( ?int $homepage_id ): string {
+		if ( ! $homepage_id ) {
+			return Plugin::$instance->documents->get_create_new_post_url( 'page' );
+		}
+
+		$document = Plugin::$instance->documents->get( $homepage_id );
+
+		if ( ! $document || ! $document->is_built_with_elementor() ) {
+			return Plugin::$instance->documents->get_create_new_post_url( 'page' );
+		}
+
+		return $document->get_edit_url();
+	}
+
+	private function get_allowed_fields_for_role() {
+		$allowed_fields = [
+			'post_title',
+			'post_content',
+			'post_excerpt',
+			'post_category',
+			'post_type',
+			'tags_input',
+		];
+
+		if ( current_user_can( 'publish_posts' ) ) {
+			$allowed_fields[] = 'post_status';
+		}
+
+		if ( current_user_can( 'edit_others_posts' ) ) {
+			$allowed_fields[] = 'post_author';
+		}
+
+		return $allowed_fields;
+	}
+
+	private function filter_post_data( $post_data ) {
+		$allowed_fields = $this->get_allowed_fields_for_role();
+		return array_filter(
+			$post_data,
+			function( $key ) use ( $allowed_fields ) {
+				return in_array( $key, $allowed_fields, true );
+			},
+			ARRAY_FILTER_USE_KEY
+		);
+	}
 	/**
 	 * @since 2.3.0
 	 * @access public
@@ -739,11 +860,29 @@ class Admin extends App {
 		Plugin::$instance->common->add_template( ELEMENTOR_PATH . 'includes/admin-templates/new-template.php' );
 	}
 
+	public function add_new_floating_elements_template() {
+		Plugin::$instance->common->add_template( ELEMENTOR_PATH . 'includes/admin-templates/new-floating-elements.php' );
+	}
+
+	public function enqueue_new_floating_elements_scripts() {
+		$suffix = Utils::is_script_debug() ? '' : '.min';
+
+		wp_enqueue_script(
+			'elementor-floating-elements-modal',
+			ELEMENTOR_ASSETS_URL . 'js/floating-elements-modal' . $suffix . '.js',
+			[],
+			ELEMENTOR_VERSION,
+			true
+		);
+
+		wp_set_script_translations( 'elementor-floating-elements-modal', 'elementor' );
+	}
+
 	/**
 	 * @access public
 	 */
 	public function enqueue_new_template_scripts() {
-		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
+		$suffix = Utils::is_script_debug() ? '' : '.min';
 
 		wp_enqueue_script(
 			'elementor-new-template',
@@ -768,7 +907,7 @@ class Admin extends App {
 	 * @access public
 	 */
 	public function enqueue_beta_tester_scripts() {
-		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
+		$suffix = Utils::is_script_debug() ? '' : '.min';
 
 		wp_enqueue_script(
 			'elementor-beta-tester',
@@ -779,6 +918,20 @@ class Admin extends App {
 		);
 
 		wp_set_script_translations( 'elementor-beta-tester', 'elementor' );
+	}
+
+	public function init_floating_elements() {
+		$screens = [
+			'elementor_library_page_e-floating-buttons' => true,
+			'edit-e-floating-buttons' => true,
+		];
+
+		if ( ! isset( $screens[ get_current_screen()->id ] ) ) {
+			return;
+		}
+
+		add_action( 'admin_head', [ $this, 'add_new_floating_elements_template' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_new_floating_elements_scripts' ] );
 	}
 
 	/**
@@ -871,8 +1024,11 @@ class Admin extends App {
 
 		// Admin Actions
 		add_action( 'admin_action_elementor_new_post', [ $this, 'admin_action_new_post' ] );
+		add_action( 'admin_action_elementor_site_settings_redirect', [ $this, 'admin_action_site_settings_redirect' ] );
+		add_action( 'admin_action_elementor_edit_website_redirect', [ $this, 'admin_action_edit_website_redirect' ] );
 
 		add_action( 'current_screen', [ $this, 'init_new_template' ] );
+		add_action( 'current_screen', [ $this, 'init_floating_elements' ] );
 		add_action( 'current_screen', [ $this, 'init_beta_tester' ] );
 
 		add_action( 'in_plugin_update_message-' . ELEMENTOR_PLUGIN_BASE, function( $plugin_data ) {
@@ -950,7 +1106,9 @@ class Admin extends App {
 	}
 
 	private function maybe_enqueue_hints() {
-		if ( ! Hints::should_display_hint( 'image-optimization' ) ) {
+		$plugin_slug = 'image-optimization';
+
+		if ( ! Hints::should_display_hint( $plugin_slug ) ) {
 			return;
 		}
 
@@ -962,13 +1120,45 @@ class Admin extends App {
 			true
 		);
 
-		$content = sprintf("%1\$s <a class='e-btn-1' href='%2\$s' target='_blank'>%3\$s</a>!",
-			__( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' ),
-			Hints::get_plugin_action_url( 'image-optimization' ),
-			( Hints::is_plugin_installed( 'image-optimization' ) ? __( 'Activate', 'elementor' ) : __( 'Install', 'elementor' ) ) . ' ' . __( 'Image Optimizer', 'elementor' )
-		);
+		$one_subscription = Hints::is_plugin_connected_to_one_subscription();
+		$is_installed = Hints::is_plugin_installed( $plugin_slug );
+		$is_active = Hints::is_plugin_active( $plugin_slug );
+
+		if ( $is_active ) {
+			return;
+		}
+
+		if ( $one_subscription ) {
+			if ( ! $is_installed ) {
+				$description = esc_html__( 'Automatically optimize images to improve site speed and performance. Included with your ONE subscription.', 'elementor' );
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+			} elseif ( ! $is_active ) {
+				$description = esc_html__( 'Image Optimizer is installed and included in your ONE subscription. Activate it to optimize images and improve site performance.', 'elementor' );
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+			}
+		} else {
+			$description = esc_html__( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' );
+			if ( ! $is_installed ) {
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+			} elseif ( ! $is_active ) {
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+			}
+		}
 
 		$dismissible = 'image_optimizer_hint';
+
+		$title = esc_html__( 'Speed up your website with Image Optimizer', 'elementor' );
+		$content = sprintf(
+			"<strong>%1\$s</strong><br>%2\$s <a class='e-btn-1' href='%3\$s' target='_blank'>%4\$s</a>!",
+			$title,
+			$description,
+			$button_url,
+			$button_text
+		);
 
 		wp_localize_script( 'media-hints', 'elementorAdminHints', [
 			'mediaHint' => [
@@ -977,11 +1167,11 @@ class Admin extends App {
 				'content' => $content,
 				'icon' => true,
 				'dismissible' => $dismissible,
-				'dismiss' => __( 'Dismiss this notice.', 'elementor' ),
+				'dismiss' => esc_attr__( 'Dismiss this notice.', 'elementor' ),
 				'button_event' => $dismissible,
 				'button_data' => base64_encode(
-					json_encode( [
-						'action_url' => Hints::get_plugin_action_url( 'image-optimization' ),
+					wp_json_encode( [
+						'action_url' => $button_url,
 					] ),
 				),
 			],
@@ -992,19 +1182,71 @@ class Admin extends App {
 
 	public function register_ajax_hints( $ajax_manager ) {
 		$ajax_manager->register_ajax_action( 'elementor_image_optimization_campaign', [ $this, 'ajax_set_image_optimization_campaign' ] );
+		$ajax_manager->register_ajax_action( 'elementor_core_site_mailer_campaign', [ $this, 'ajax_site_mailer_campaign' ] );
+		$ajax_manager->register_ajax_action( 'elementor_core_ally_campaign', [ $this, 'ajax_ally_campaign' ] );
 	}
 
-	public function ajax_set_image_optimization_campaign( $request ) {
+	public function ajax_ally_campaign( $request ) {
+		if ( ! current_user_can( 'install_plugins' ) ) {
+			return;
+		}
+
 		if ( empty( $request['source'] ) ) {
 			return;
 		}
 
 		$campaign_data = [
 			'source' => sanitize_key( $request['source'] ),
-			'campaign' => 'io-plg',
+			'campaign' => 'ally-plg',
 			'medium' => 'wp-dash',
 		];
 
+		set_transient( 'elementor_ea11y_campaign', $campaign_data, 30 * DAY_IN_SECONDS );
+	}
+
+	public function ajax_set_image_optimization_campaign( $request ) {
+		if ( ! current_user_can( 'install_plugins' ) ) {
+			return;
+		}
+
+		if ( empty( $request['source'] ) ) {
+			return;
+		}
+
+		$one_subscription = Hints::is_plugin_connected_to_one_subscription();
+
+		if ( $one_subscription && strpos( $request['source'], 'editor' ) !== false ) {
+			$medium = 'editor-one';
+		} elseif ( $one_subscription ) {
+			$medium = 'wp-dash-one';
+		} else {
+			$medium = 'wp-dash';
+		}
+
+		$campaign_data = [
+			'source' => sanitize_key( $request['source'] ),
+			'campaign' => $one_subscription ? 'io-plg-one' : 'io-plg',
+			'medium' => $medium,
+		];
+
 		set_transient( 'elementor_image_optimization_campaign', $campaign_data, 30 * DAY_IN_SECONDS );
+	}
+
+	public function ajax_site_mailer_campaign( $request ) {
+		if ( ! current_user_can( 'install_plugins' ) ) {
+			return;
+		}
+
+		if ( empty( $request['source'] ) ) {
+			return;
+		}
+
+		$campaign_data = [
+			'source' => sanitize_key( $request['source'] ),
+			'campaign' => 'sm-plg',
+			'medium' => 'wp-dash',
+		];
+
+		set_transient( 'elementor_site_mailer_campaign', $campaign_data, 30 * DAY_IN_SECONDS );
 	}
 }

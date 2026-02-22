@@ -8,7 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-// TODO: Move this class to pro version for better architecture.
+/**
+ * TODO: Move this class to pro version for better architecture.
+ */
 class Canary_Deployment extends Module {
 
 	const CURRENT_VERSION = ELEMENTOR_VERSION;
@@ -125,7 +127,7 @@ class Canary_Deployment extends Module {
 			// Reset results for each condition.
 			$result = false;
 			switch ( $condition['type'] ) {
-				case 'wordpress': // phpcs:ignore WordPress.WP.CapitalPDangit.Misspelled
+				case 'wordpress': // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText
 					// include an unmodified $wp_version
 					include ABSPATH . WPINC . '/version.php';
 					$result = version_compare( $wp_version, $condition['version'], $condition['operator'] );

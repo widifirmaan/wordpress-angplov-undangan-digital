@@ -40,10 +40,11 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   compileCSS: () => (/* binding */ compileCSS),
-  getCSSRules: () => (/* binding */ getCSSRules)
+  getCSSRules: () => (/* binding */ getCSSRules),
+  getCSSValueFromRawStyle: () => (/* reexport */ getCSSValueFromRawStyle)
 });
 
-;// CONCATENATED MODULE: ./node_modules/tslib/tslib.es6.mjs
+;// ./node_modules/tslib/tslib.es6.mjs
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -58,7 +59,7 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
 
 var extendStatics = function(d, b) {
   extendStatics = Object.setPrototypeOf ||
@@ -169,8 +170,8 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 
 function __generator(thisArg, body) {
-  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-  return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+  return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
   function verb(n) { return function (v) { return step([n, v]); }; }
   function step(op) {
       if (f) throw new TypeError("Generator is already executing.");
@@ -274,8 +275,9 @@ function __await(v) {
 function __asyncGenerator(thisArg, _arguments, generator) {
   if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
   var g = generator.apply(thisArg, _arguments || []), i, q = [];
-  return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
-  function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
+  return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function () { return this; }, i;
+  function awaitReturn(f) { return function (v) { return Promise.resolve(v).then(f, reject); }; }
+  function verb(n, f) { if (g[n]) { i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; if (f) i[n] = f(i[n]); } }
   function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
   function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
   function fulfill(value) { resume("next", value); }
@@ -308,10 +310,19 @@ var __setModuleDefault = Object.create ? (function(o, v) {
   o["default"] = v;
 };
 
+var ownKeys = function(o) {
+  ownKeys = Object.getOwnPropertyNames || function (o) {
+    var ar = [];
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+    return ar;
+  };
+  return ownKeys(o);
+};
+
 function __importStar(mod) {
   if (mod && mod.__esModule) return mod;
   var result = {};
-  if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+  if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
   __setModuleDefault(result, mod);
   return result;
 }
@@ -341,16 +352,18 @@ function __classPrivateFieldIn(state, receiver) {
 function __addDisposableResource(env, value, async) {
   if (value !== null && value !== void 0) {
     if (typeof value !== "object" && typeof value !== "function") throw new TypeError("Object expected.");
-    var dispose;
+    var dispose, inner;
     if (async) {
-        if (!Symbol.asyncDispose) throw new TypeError("Symbol.asyncDispose is not defined.");
-        dispose = value[Symbol.asyncDispose];
+      if (!Symbol.asyncDispose) throw new TypeError("Symbol.asyncDispose is not defined.");
+      dispose = value[Symbol.asyncDispose];
     }
     if (dispose === void 0) {
-        if (!Symbol.dispose) throw new TypeError("Symbol.dispose is not defined.");
-        dispose = value[Symbol.dispose];
+      if (!Symbol.dispose) throw new TypeError("Symbol.dispose is not defined.");
+      dispose = value[Symbol.dispose];
+      if (async) inner = dispose;
     }
     if (typeof dispose !== "function") throw new TypeError("Object not disposable.");
+    if (inner) dispose = function() { try { inner.call(this); } catch (e) { return Promise.reject(e); } };
     env.stack.push({ value: value, dispose: dispose, async: async });
   }
   else if (async) {
@@ -369,20 +382,34 @@ function __disposeResources(env) {
     env.error = env.hasError ? new _SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
     env.hasError = true;
   }
+  var r, s = 0;
   function next() {
-    while (env.stack.length) {
-      var rec = env.stack.pop();
+    while (r = env.stack.pop()) {
       try {
-        var result = rec.dispose && rec.dispose.call(rec.value);
-        if (rec.async) return Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+        if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+        if (r.dispose) {
+          var result = r.dispose.call(r.value);
+          if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+        }
+        else s |= 1;
       }
       catch (e) {
-          fail(e);
+        fail(e);
       }
     }
+    if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
     if (env.hasError) throw env.error;
   }
   return next();
+}
+
+function __rewriteRelativeImportExtension(path, preserveJsx) {
+  if (typeof path === "string" && /^\.\.?\//.test(path)) {
+      return path.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function (m, tsx, d, ext, cm) {
+          return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext || !cm) ? m : (d + ext + "." + cm.toLowerCase() + "js");
+      });
+  }
+  return path;
 }
 
 /* harmony default export */ const tslib_es6 = ({
@@ -391,6 +418,10 @@ function __disposeResources(env) {
   __rest,
   __decorate,
   __param,
+  __esDecorate,
+  __runInitializers,
+  __propKey,
+  __setFunctionName,
   __metadata,
   __awaiter,
   __generator,
@@ -413,9 +444,10 @@ function __disposeResources(env) {
   __classPrivateFieldIn,
   __addDisposableResource,
   __disposeResources,
+  __rewriteRelativeImportExtension,
 });
 
-;// CONCATENATED MODULE: ./node_modules/lower-case/dist.es2015/index.js
+;// ./node_modules/lower-case/dist.es2015/index.js
 /**
  * Source: ftp://ftp.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt
  */
@@ -464,7 +496,7 @@ function lowerCase(str) {
     return str.toLowerCase();
 }
 
-;// CONCATENATED MODULE: ./node_modules/no-case/dist.es2015/index.js
+;// ./node_modules/no-case/dist.es2015/index.js
 
 // Support camel case ("camelCase" -> "camel Case" and "CAMELCase" -> "CAMEL Case").
 var DEFAULT_SPLIT_REGEXP = [/([a-z0-9])([A-Z])/g, /([A-Z])([A-Z][a-z])/g];
@@ -496,7 +528,7 @@ function replace(input, re, value) {
     return re.reduce(function (input, re) { return input.replace(re, value); }, input);
 }
 
-;// CONCATENATED MODULE: ./node_modules/dot-case/dist.es2015/index.js
+;// ./node_modules/dot-case/dist.es2015/index.js
 
 
 function dotCase(input, options) {
@@ -504,7 +536,7 @@ function dotCase(input, options) {
     return noCase(input, __assign({ delimiter: "." }, options));
 }
 
-;// CONCATENATED MODULE: ./node_modules/param-case/dist.es2015/index.js
+;// ./node_modules/param-case/dist.es2015/index.js
 
 
 function paramCase(input, options) {
@@ -512,159 +544,99 @@ function paramCase(input, options) {
     return dotCase(input, __assign({ delimiter: "-" }, options));
 }
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/constants.js
-const VARIABLE_REFERENCE_PREFIX = 'var:';
-const VARIABLE_PATH_SEPARATOR_TOKEN_ATTRIBUTE = '|';
-const VARIABLE_PATH_SEPARATOR_TOKEN_STYLE = '--';
-
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/utils.js
-/**
- * External dependencies
- */
+;// ./node_modules/@wordpress/style-engine/build-module/styles/constants.js
+const VARIABLE_REFERENCE_PREFIX = "var:";
+const VARIABLE_PATH_SEPARATOR_TOKEN_ATTRIBUTE = "|";
+const VARIABLE_PATH_SEPARATOR_TOKEN_STYLE = "--";
 
 
-/**
- * Internal dependencies
- */
+;// ./node_modules/@wordpress/style-engine/build-module/styles/utils.js
 
 
-
-/**
- * Helper util to return a value from a certain path of the object.
- * Path is specified as an array of properties, like `[ 'x', 'y' ]`.
- *
- * @param object Input object.
- * @param path   Path to the object property.
- * @return Value of the object property at the specified path.
- */
 const getStyleValueByPath = (object, path) => {
   let value = object;
-  path.forEach(fieldName => {
+  path.forEach((fieldName) => {
     value = value?.[fieldName];
   });
   return value;
 };
-
-/**
- * Returns a JSON representation of the generated CSS rules.
- *
- * @param style   Style object.
- * @param options Options object with settings to adjust how the styles are generated.
- * @param path    An array of strings representing the path to the style value in the style object.
- * @param ruleKey A CSS property key.
- *
- * @return GeneratedCSSRule[] CSS rules.
- */
 function generateRule(style, options, path, ruleKey) {
   const styleValue = getStyleValueByPath(style, path);
-  return styleValue ? [{
-    selector: options?.selector,
-    key: ruleKey,
-    value: getCSSVarFromStyleValue(styleValue)
-  }] : [];
+  return styleValue ? [
+    {
+      selector: options?.selector,
+      key: ruleKey,
+      value: getCSSValueFromRawStyle(styleValue)
+    }
+  ] : [];
 }
-
-/**
- * Returns a JSON representation of the generated CSS rules taking into account box model properties, top, right, bottom, left.
- *
- * @param style                Style object.
- * @param options              Options object with settings to adjust how the styles are generated.
- * @param path                 An array of strings representing the path to the style value in the style object.
- * @param ruleKeys             An array of CSS property keys and patterns.
- * @param individualProperties The "sides" or individual properties for which to generate rules.
- *
- * @return GeneratedCSSRule[]  CSS rules.
- */
-function generateBoxRules(style, options, path, ruleKeys, individualProperties = ['top', 'right', 'bottom', 'left']) {
-  const boxStyle = getStyleValueByPath(style, path);
+function generateBoxRules(style, options, path, ruleKeys, individualProperties = ["top", "right", "bottom", "left"]) {
+  const boxStyle = getStyleValueByPath(
+    style,
+    path
+  );
   if (!boxStyle) {
     return [];
   }
   const rules = [];
-  if (typeof boxStyle === 'string') {
+  if (typeof boxStyle === "string") {
     rules.push({
       selector: options?.selector,
       key: ruleKeys.default,
-      value: boxStyle
+      value: getCSSValueFromRawStyle(boxStyle)
     });
   } else {
-    const sideRules = individualProperties.reduce((acc, side) => {
-      const value = getCSSVarFromStyleValue(getStyleValueByPath(boxStyle, [side]));
-      if (value) {
-        acc.push({
-          selector: options?.selector,
-          key: ruleKeys?.individual.replace('%s', upperFirst(side)),
-          value
-        });
-      }
-      return acc;
-    }, []);
+    const sideRules = individualProperties.reduce(
+      (acc, side) => {
+        const value = getCSSValueFromRawStyle(
+          getStyleValueByPath(boxStyle, [side])
+        );
+        if (value) {
+          acc.push({
+            selector: options?.selector,
+            key: ruleKeys?.individual.replace(
+              "%s",
+              upperFirst(side)
+            ),
+            value
+          });
+        }
+        return acc;
+      },
+      []
+    );
     rules.push(...sideRules);
   }
   return rules;
 }
-
-/**
- * Returns a CSS var value from incoming style value following the pattern `var:description|context|slug`.
- *
- * @param styleValue A raw style value.
- *
- * @return string A CSS var value.
- */
-function getCSSVarFromStyleValue(styleValue) {
-  if (typeof styleValue === 'string' && styleValue.startsWith(VARIABLE_REFERENCE_PREFIX)) {
-    const variable = styleValue.slice(VARIABLE_REFERENCE_PREFIX.length).split(VARIABLE_PATH_SEPARATOR_TOKEN_ATTRIBUTE).map(presetVariable => paramCase(presetVariable, {
-      splitRegexp: [/([a-z0-9])([A-Z])/g,
-      // fooBar => foo-bar, 3Bar => 3-bar
-      /([0-9])([a-z])/g,
-      // 3bar => 3-bar
-      /([A-Za-z])([0-9])/g,
-      // Foo3 => foo-3, foo3 => foo-3
-      /([A-Z])([A-Z][a-z])/g // FOOBar => foo-bar
-      ]
-    })).join(VARIABLE_PATH_SEPARATOR_TOKEN_STYLE);
+function getCSSValueFromRawStyle(styleValue) {
+  if (typeof styleValue === "string" && styleValue.startsWith(VARIABLE_REFERENCE_PREFIX)) {
+    const variable = styleValue.slice(VARIABLE_REFERENCE_PREFIX.length).split(VARIABLE_PATH_SEPARATOR_TOKEN_ATTRIBUTE).map(
+      (presetVariable) => paramCase(presetVariable, {
+        splitRegexp: [
+          /([a-z0-9])([A-Z])/g,
+          // fooBar => foo-bar, 3Bar => 3-bar
+          /([0-9])([a-z])/g,
+          // 3bar => 3-bar
+          /([A-Za-z])([0-9])/g,
+          // Foo3 => foo-3, foo3 => foo-3
+          /([A-Z])([A-Z][a-z])/g
+          // FOOBar => foo-bar
+        ]
+      })
+    ).join(VARIABLE_PATH_SEPARATOR_TOKEN_STYLE);
     return `var(--wp--${variable})`;
   }
   return styleValue;
 }
-
-/**
- * Capitalizes the first letter in a string.
- *
- * @param string The string whose first letter the function will capitalize.
- *
- * @return String with the first letter capitalized.
- */
 function upperFirst(string) {
   const [firstLetter, ...rest] = string;
-  return firstLetter.toUpperCase() + rest.join('');
+  return firstLetter.toUpperCase() + rest.join("");
 }
-
-/**
- * Converts an array of strings into a camelCase string.
- *
- * @param strings The strings to join into a camelCase string.
- *
- * @return camelCase string.
- */
 function camelCaseJoin(strings) {
   const [firstItem, ...rest] = strings;
-  return firstItem.toLowerCase() + rest.map(upperFirst).join('');
+  return firstItem.toLowerCase() + rest.map(upperFirst).join("");
 }
-
-/**
- * Safely decodes a URI with `decodeURI`. Returns the URI unmodified if
- * `decodeURI` throws an error.
- *
- * @param {string} uri URI to decode.
- *
- * @example
- * ```js
- * const badUri = safeDecodeURI( '%z' ); // does not throw an Error, simply returns '%z'
- * ```
- *
- * @return {string} Decoded URI if possible.
- */
 function safeDecodeURI(uri) {
   try {
     return decodeURI(uri);
@@ -673,440 +645,502 @@ function safeDecodeURI(uri) {
   }
 }
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/border/index.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/border/index.js
 
-
-/**
- * Creates a function for generating CSS rules when the style path is the same as the camelCase CSS property used in React.
- *
- * @param path An array of strings representing the path to the style value in the style object.
- *
- * @return A function that generates CSS rules.
- */
 function createBorderGenerateFunction(path) {
   return (style, options) => generateRule(style, options, path, camelCaseJoin(path));
 }
-
-/**
- * Creates a function for generating border-{top,bottom,left,right}-{color,style,width} CSS rules.
- *
- * @param edge The edge to create CSS rules for.
- *
- * @return A function that generates CSS rules.
- */
 function createBorderEdgeGenerateFunction(edge) {
   return (style, options) => {
-    return ['color', 'style', 'width'].flatMap(key => {
-      const path = ['border', edge, key];
+    return ["color", "style", "width"].flatMap((key) => {
+      const path = ["border", edge, key];
       return createBorderGenerateFunction(path)(style, options);
     });
   };
 }
 const color = {
-  name: 'color',
-  generate: createBorderGenerateFunction(['border', 'color'])
+  name: "color",
+  generate: createBorderGenerateFunction(["border", "color"])
 };
 const radius = {
-  name: 'radius',
+  name: "radius",
   generate: (style, options) => {
-    return generateBoxRules(style, options, ['border', 'radius'], {
-      default: 'borderRadius',
-      individual: 'border%sRadius'
-    }, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
+    return generateBoxRules(
+      style,
+      options,
+      ["border", "radius"],
+      {
+        default: "borderRadius",
+        individual: "border%sRadius"
+      },
+      ["topLeft", "topRight", "bottomLeft", "bottomRight"]
+    );
   }
 };
 const borderStyle = {
-  name: 'style',
-  generate: createBorderGenerateFunction(['border', 'style'])
+  name: "style",
+  generate: createBorderGenerateFunction(["border", "style"])
 };
 const width = {
-  name: 'width',
-  generate: createBorderGenerateFunction(['border', 'width'])
+  name: "width",
+  generate: createBorderGenerateFunction(["border", "width"])
 };
 const borderTop = {
-  name: 'borderTop',
-  generate: createBorderEdgeGenerateFunction('top')
+  name: "borderTop",
+  generate: createBorderEdgeGenerateFunction("top")
 };
 const borderRight = {
-  name: 'borderRight',
-  generate: createBorderEdgeGenerateFunction('right')
+  name: "borderRight",
+  generate: createBorderEdgeGenerateFunction("right")
 };
 const borderBottom = {
-  name: 'borderBottom',
-  generate: createBorderEdgeGenerateFunction('bottom')
+  name: "borderBottom",
+  generate: createBorderEdgeGenerateFunction("bottom")
 };
 const borderLeft = {
-  name: 'borderLeft',
-  generate: createBorderEdgeGenerateFunction('left')
+  name: "borderLeft",
+  generate: createBorderEdgeGenerateFunction("left")
 };
-/* harmony default export */ const border = ([color, borderStyle, width, radius, borderTop, borderRight, borderBottom, borderLeft]);
+var border_default = [
+  color,
+  borderStyle,
+  width,
+  radius,
+  borderTop,
+  borderRight,
+  borderBottom,
+  borderLeft
+];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/color/background.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/color/background.js
 
 const background = {
-  name: 'background',
+  name: "background",
   generate: (style, options) => {
-    return generateRule(style, options, ['color', 'background'], 'backgroundColor');
+    return generateRule(
+      style,
+      options,
+      ["color", "background"],
+      "backgroundColor"
+    );
   }
 };
-/* harmony default export */ const color_background = (background);
+var background_default = background;
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/color/gradient.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/color/gradient.js
 
 const gradient = {
-  name: 'gradient',
+  name: "gradient",
   generate: (style, options) => {
-    return generateRule(style, options, ['color', 'gradient'], 'background');
+    return generateRule(
+      style,
+      options,
+      ["color", "gradient"],
+      "background"
+    );
   }
 };
-/* harmony default export */ const color_gradient = (gradient);
+var gradient_default = gradient;
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/color/text.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/color/text.js
 
 const text_text = {
-  name: 'text',
+  name: "text",
   generate: (style, options) => {
-    return generateRule(style, options, ['color', 'text'], 'color');
+    return generateRule(style, options, ["color", "text"], "color");
   }
 };
-/* harmony default export */ const color_text = (text_text);
+var text_default = text_text;
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/color/index.js
-/**
- * Internal dependencies
- */
+
+;// ./node_modules/@wordpress/style-engine/build-module/styles/color/index.js
 
 
 
-/* harmony default export */ const styles_color = ([color_text, color_gradient, color_background]);
+var color_default = [text_default, gradient_default, background_default];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/dimensions/index.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/dimensions/index.js
 
 const minHeight = {
-  name: 'minHeight',
+  name: "minHeight",
   generate: (style, options) => {
-    return generateRule(style, options, ['dimensions', 'minHeight'], 'minHeight');
+    return generateRule(
+      style,
+      options,
+      ["dimensions", "minHeight"],
+      "minHeight"
+    );
   }
 };
 const aspectRatio = {
-  name: 'aspectRatio',
+  name: "aspectRatio",
   generate: (style, options) => {
-    return generateRule(style, options, ['dimensions', 'aspectRatio'], 'aspectRatio');
+    return generateRule(
+      style,
+      options,
+      ["dimensions", "aspectRatio"],
+      "aspectRatio"
+    );
   }
 };
-/* harmony default export */ const dimensions = ([minHeight, aspectRatio]);
+var dimensions_default = [minHeight, aspectRatio];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/background/index.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/background/index.js
 
 const backgroundImage = {
-  name: 'backgroundImage',
+  name: "backgroundImage",
   generate: (style, options) => {
     const _backgroundImage = style?.background?.backgroundImage;
-    if (typeof _backgroundImage === 'object' && _backgroundImage?.url) {
-      return [{
-        selector: options.selector,
-        key: 'backgroundImage',
-        // Passed `url` may already be encoded. To prevent double encoding, decodeURI is executed to revert to the original string.
-        value: `url( '${encodeURI(safeDecodeURI(_backgroundImage.url))}' )`
-      }];
+    if (typeof _backgroundImage === "object" && _backgroundImage?.url) {
+      return [
+        {
+          selector: options.selector,
+          key: "backgroundImage",
+          // Passed `url` may already be encoded. To prevent double encoding, decodeURI is executed to revert to the original string.
+          value: `url( '${encodeURI(
+            safeDecodeURI(_backgroundImage.url)
+          )}' )`
+        }
+      ];
     }
-
-    /*
-     * If the background image is a string, it could already contain a url() function,
-     * or have a linear-gradient value.
-     */
-    if (typeof _backgroundImage === 'string') {
-      return generateRule(style, options, ['background', 'backgroundImage'], 'backgroundImage');
-    }
-    return [];
+    return generateRule(
+      style,
+      options,
+      ["background", "backgroundImage"],
+      "backgroundImage"
+    );
   }
 };
 const backgroundPosition = {
-  name: 'backgroundPosition',
+  name: "backgroundPosition",
   generate: (style, options) => {
-    return generateRule(style, options, ['background', 'backgroundPosition'], 'backgroundPosition');
+    return generateRule(
+      style,
+      options,
+      ["background", "backgroundPosition"],
+      "backgroundPosition"
+    );
   }
 };
 const backgroundRepeat = {
-  name: 'backgroundRepeat',
+  name: "backgroundRepeat",
   generate: (style, options) => {
-    return generateRule(style, options, ['background', 'backgroundRepeat'], 'backgroundRepeat');
+    return generateRule(
+      style,
+      options,
+      ["background", "backgroundRepeat"],
+      "backgroundRepeat"
+    );
   }
 };
 const backgroundSize = {
-  name: 'backgroundSize',
+  name: "backgroundSize",
   generate: (style, options) => {
-    return generateRule(style, options, ['background', 'backgroundSize'], 'backgroundSize');
+    return generateRule(
+      style,
+      options,
+      ["background", "backgroundSize"],
+      "backgroundSize"
+    );
   }
 };
-/* harmony default export */ const styles_background = ([backgroundImage, backgroundPosition, backgroundRepeat, backgroundSize]);
+const backgroundAttachment = {
+  name: "backgroundAttachment",
+  generate: (style, options) => {
+    return generateRule(
+      style,
+      options,
+      ["background", "backgroundAttachment"],
+      "backgroundAttachment"
+    );
+  }
+};
+var background_background_default = [
+  backgroundImage,
+  backgroundPosition,
+  backgroundRepeat,
+  backgroundSize,
+  backgroundAttachment
+];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/shadow/index.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/shadow/index.js
 
 const shadow = {
-  name: 'shadow',
+  name: "shadow",
   generate: (style, options) => {
-    return generateRule(style, options, ['shadow'], 'boxShadow');
+    return generateRule(style, options, ["shadow"], "boxShadow");
   }
 };
-/* harmony default export */ const styles_shadow = ([shadow]);
+var shadow_default = [shadow];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/outline/index.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/outline/index.js
 
 const outline_color = {
-  name: 'color',
-  generate: (style, options, path = ['outline', 'color'], ruleKey = 'outlineColor') => {
+  name: "color",
+  generate: (style, options, path = ["outline", "color"], ruleKey = "outlineColor") => {
     return generateRule(style, options, path, ruleKey);
   }
 };
 const offset = {
-  name: 'offset',
-  generate: (style, options, path = ['outline', 'offset'], ruleKey = 'outlineOffset') => {
+  name: "offset",
+  generate: (style, options, path = ["outline", "offset"], ruleKey = "outlineOffset") => {
     return generateRule(style, options, path, ruleKey);
   }
 };
 const outlineStyle = {
-  name: 'style',
-  generate: (style, options, path = ['outline', 'style'], ruleKey = 'outlineStyle') => {
+  name: "style",
+  generate: (style, options, path = ["outline", "style"], ruleKey = "outlineStyle") => {
     return generateRule(style, options, path, ruleKey);
   }
 };
 const outline_width = {
-  name: 'width',
-  generate: (style, options, path = ['outline', 'width'], ruleKey = 'outlineWidth') => {
+  name: "width",
+  generate: (style, options, path = ["outline", "width"], ruleKey = "outlineWidth") => {
     return generateRule(style, options, path, ruleKey);
   }
 };
-/* harmony default export */ const outline = ([outline_color, outlineStyle, offset, outline_width]);
+var outline_default = [outline_color, outlineStyle, offset, outline_width];
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/spacing/padding.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/spacing/padding.js
 
 const padding = {
-  name: 'padding',
+  name: "padding",
   generate: (style, options) => {
-    return generateBoxRules(style, options, ['spacing', 'padding'], {
-      default: 'padding',
-      individual: 'padding%s'
+    return generateBoxRules(style, options, ["spacing", "padding"], {
+      default: "padding",
+      individual: "padding%s"
     });
   }
 };
-/* harmony default export */ const spacing_padding = (padding);
+var padding_default = padding;
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/spacing/margin.js
-/**
- * Internal dependencies
- */
 
+;// ./node_modules/@wordpress/style-engine/build-module/styles/spacing/margin.js
 
 const margin = {
-  name: 'margin',
+  name: "margin",
   generate: (style, options) => {
-    return generateBoxRules(style, options, ['spacing', 'margin'], {
-      default: 'margin',
-      individual: 'margin%s'
+    return generateBoxRules(style, options, ["spacing", "margin"], {
+      default: "margin",
+      individual: "margin%s"
     });
   }
 };
-/* harmony default export */ const spacing_margin = (margin);
-
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/spacing/index.js
-/**
- * Internal dependencies
- */
+var margin_default = margin;
 
 
-/* harmony default export */ const spacing = ([spacing_margin, spacing_padding]);
+;// ./node_modules/@wordpress/style-engine/build-module/styles/spacing/index.js
 
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/typography/index.js
-/**
- * Internal dependencies
- */
 
+var spacing_default = [margin_default, padding_default];
+
+
+;// ./node_modules/@wordpress/style-engine/build-module/styles/typography/index.js
 
 const fontSize = {
-  name: 'fontSize',
+  name: "fontSize",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'fontSize'], 'fontSize');
+    return generateRule(
+      style,
+      options,
+      ["typography", "fontSize"],
+      "fontSize"
+    );
   }
 };
 const fontStyle = {
-  name: 'fontStyle',
+  name: "fontStyle",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'fontStyle'], 'fontStyle');
+    return generateRule(
+      style,
+      options,
+      ["typography", "fontStyle"],
+      "fontStyle"
+    );
   }
 };
 const fontWeight = {
-  name: 'fontWeight',
+  name: "fontWeight",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'fontWeight'], 'fontWeight');
+    return generateRule(
+      style,
+      options,
+      ["typography", "fontWeight"],
+      "fontWeight"
+    );
   }
 };
 const fontFamily = {
-  name: 'fontFamily',
+  name: "fontFamily",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'fontFamily'], 'fontFamily');
+    return generateRule(
+      style,
+      options,
+      ["typography", "fontFamily"],
+      "fontFamily"
+    );
   }
 };
 const letterSpacing = {
-  name: 'letterSpacing',
+  name: "letterSpacing",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'letterSpacing'], 'letterSpacing');
+    return generateRule(
+      style,
+      options,
+      ["typography", "letterSpacing"],
+      "letterSpacing"
+    );
   }
 };
 const lineHeight = {
-  name: 'lineHeight',
+  name: "lineHeight",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'lineHeight'], 'lineHeight');
+    return generateRule(
+      style,
+      options,
+      ["typography", "lineHeight"],
+      "lineHeight"
+    );
   }
 };
 const textColumns = {
-  name: 'textColumns',
+  name: "textColumns",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'textColumns'], 'columnCount');
+    return generateRule(
+      style,
+      options,
+      ["typography", "textColumns"],
+      "columnCount"
+    );
   }
 };
 const textDecoration = {
-  name: 'textDecoration',
+  name: "textDecoration",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'textDecoration'], 'textDecoration');
+    return generateRule(
+      style,
+      options,
+      ["typography", "textDecoration"],
+      "textDecoration"
+    );
   }
 };
 const textTransform = {
-  name: 'textTransform',
+  name: "textTransform",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'textTransform'], 'textTransform');
+    return generateRule(
+      style,
+      options,
+      ["typography", "textTransform"],
+      "textTransform"
+    );
   }
 };
 const writingMode = {
-  name: 'writingMode',
+  name: "writingMode",
   generate: (style, options) => {
-    return generateRule(style, options, ['typography', 'writingMode'], 'writingMode');
+    return generateRule(
+      style,
+      options,
+      ["typography", "writingMode"],
+      "writingMode"
+    );
   }
 };
-/* harmony default export */ const typography = ([fontFamily, fontSize, fontStyle, fontWeight, letterSpacing, lineHeight, textColumns, textDecoration, textTransform, writingMode]);
-
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/styles/index.js
-/**
- * Internal dependencies
- */
-
-
-
-
-
-
-
-
-const styleDefinitions = [...border, ...styles_color, ...dimensions, ...outline, ...spacing, ...typography, ...styles_shadow, ...styles_background];
-
-;// CONCATENATED MODULE: ./node_modules/@wordpress/style-engine/build-module/index.js
-/**
- * External dependencies
- */
+var typography_default = [
+  fontFamily,
+  fontSize,
+  fontStyle,
+  fontWeight,
+  letterSpacing,
+  lineHeight,
+  textColumns,
+  textDecoration,
+  textTransform,
+  writingMode
+];
 
 
-/**
- * Internal dependencies
- */
+;// ./node_modules/@wordpress/style-engine/build-module/styles/index.js
 
 
 
-/**
- * Generates a stylesheet for a given style object and selector.
- *
- * @since 6.1.0 Introduced in WordPress core.
- *
- * @param style   Style object, for example, the value of a block's attributes.style object or the top level styles in theme.json
- * @param options Options object with settings to adjust how the styles are generated.
- *
- * @return A generated stylesheet or inline style declarations.
- */
+
+
+
+
+
+const styleDefinitions = [
+  ...border_default,
+  ...color_default,
+  ...dimensions_default,
+  ...outline_default,
+  ...spacing_default,
+  ...typography_default,
+  ...shadow_default,
+  ...background_background_default
+];
+
+
+;// ./node_modules/@wordpress/style-engine/build-module/index.js
+
+
 function compileCSS(style, options = {}) {
   const rules = getCSSRules(style, options);
-
-  // If no selector is provided, treat generated rules as inline styles to be returned as a single string.
   if (!options?.selector) {
     const inlineRules = [];
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       inlineRules.push(`${paramCase(rule.key)}: ${rule.value};`);
     });
-    return inlineRules.join(' ');
+    return inlineRules.join(" ");
   }
-  const groupedRules = rules.reduce((acc, rule) => {
-    const {
-      selector
-    } = rule;
-    if (!selector) {
+  const groupedRules = rules.reduce(
+    (acc, rule) => {
+      const { selector } = rule;
+      if (!selector) {
+        return acc;
+      }
+      if (!acc[selector]) {
+        acc[selector] = [];
+      }
+      acc[selector].push(rule);
       return acc;
-    }
-    if (!acc[selector]) {
-      acc[selector] = [];
-    }
-    acc[selector].push(rule);
-    return acc;
-  }, {});
-  const selectorRules = Object.keys(groupedRules).reduce((acc, subSelector) => {
-    acc.push(`${subSelector} { ${groupedRules[subSelector].map(rule => `${paramCase(rule.key)}: ${rule.value};`).join(' ')} }`);
-    return acc;
-  }, []);
-  return selectorRules.join('\n');
+    },
+    {}
+  );
+  const selectorRules = Object.keys(groupedRules).reduce(
+    (acc, subSelector) => {
+      acc.push(
+        `${subSelector} { ${groupedRules[subSelector].map(
+          (rule) => `${paramCase(rule.key)}: ${rule.value};`
+        ).join(" ")} }`
+      );
+      return acc;
+    },
+    []
+  );
+  return selectorRules.join("\n");
 }
-
-/**
- * Returns a JSON representation of the generated CSS rules.
- *
- * @since 6.1.0 Introduced in WordPress core.
- *
- * @param style   Style object, for example, the value of a block's attributes.style object or the top level styles in theme.json
- * @param options Options object with settings to adjust how the styles are generated.
- *
- * @return A collection of objects containing the selector, if any, the CSS property key (camelcase) and parsed CSS value.
- */
 function getCSSRules(style, options = {}) {
   const rules = [];
-  styleDefinitions.forEach(definition => {
-    if (typeof definition.generate === 'function') {
+  styleDefinitions.forEach((definition) => {
+    if (typeof definition.generate === "function") {
       rules.push(...definition.generate(style, options));
     }
   });
   return rules;
 }
+
+
 
 (window.wp = window.wp || {}).styleEngine = __webpack_exports__;
 /******/ })()

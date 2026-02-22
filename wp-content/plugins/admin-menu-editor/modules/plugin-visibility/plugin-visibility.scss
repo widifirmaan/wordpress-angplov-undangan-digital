@@ -1,9 +1,5 @@
 @import "../../css/ui-constants";
 
-#ame-plugin-visibility-editor .plugins {
-	margin-top: $smallActorSelectorToUiGap;
-}
-
 /*
  Plugin visibility module
  ------------------------
@@ -48,14 +44,8 @@
  */
 
 .ame-pv-save-form {
-	float: right;
-	margin-top: 5px;
-	margin-bottom: 6px - $smallActorSelectorToUiGap;
-}
-
-//Make room for th save button.
-#ws_actor_selector_container {
-	margin-right: 130px;
+	margin-left: auto;
+	padding-left: 2em;
 }
 
 /*

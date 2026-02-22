@@ -120,6 +120,10 @@ abstract class Element_Base extends Controls_Stack {
 		return $this->depended_scripts;
 	}
 
+	public function get_global_scripts() {
+		return [ 'elementor-frontend' ];
+	}
+
 	/**
 	 * Enqueue scripts.
 	 *
@@ -131,7 +135,7 @@ abstract class Element_Base extends Controls_Stack {
 	 */
 	final public function enqueue_scripts() {
 		$deprecated_scripts = [
-			//Insert here when you have a deprecated script
+			// Insert here when you have a deprecated script.
 		];
 
 		foreach ( $this->get_script_depends() as $script ) {
@@ -141,7 +145,13 @@ abstract class Element_Base extends Controls_Stack {
 
 			wp_enqueue_script( $script );
 		}
+
+		foreach ( $this->get_global_scripts() as $script ) {
+			wp_enqueue_script( $script );
+		}
 	}
+
+	public function register_frontend_handlers() {}
 
 	/**
 	 * Get style dependencies.
@@ -288,7 +298,7 @@ abstract class Element_Base extends Controls_Stack {
 	/**
 	 * Whether the element returns dynamic content.
 	 *
-	 * set to determine whether to cache the element output or not.
+	 * Set to determine whether to cache the element output or not.
 	 *
 	 * @since 3.22.0
 	 * @access protected
@@ -397,13 +407,12 @@ abstract class Element_Base extends Controls_Stack {
 	 * @access public
 	 *
 	 * @param array|string $element   The HTML element.
-	 * @param array $url_control      Array of link settings.
-	 * @param bool $overwrite         Optional. Whether to overwrite existing
-	 *                                attribute. Default is false, not to overwrite.
+	 * @param array        $url_control      Array of link settings.
+	 * @param bool         $overwrite         Optional. Whether to overwrite existing
+	 *                                        attribute. Default is false, not to overwrite.
 	 *
 	 * @return Element_Base Current instance of the element.
 	 */
-
 	public function add_link_attributes( $element, array $url_control, $overwrite = false ) {
 		$attributes = [];
 
@@ -422,7 +431,7 @@ abstract class Element_Base extends Controls_Stack {
 		}
 
 		if ( ! empty( $url_control['custom_attributes'] ) ) {
-			// Custom URL attributes should come as a string of comma-delimited key|value pairs
+			// Custom URL attributes should come as a string of comma-delimited key|value pairs.
 			$attributes = array_merge( $attributes, Utils::parse_custom_attributes( $url_control['custom_attributes'] ) );
 		}
 
@@ -445,7 +454,9 @@ abstract class Element_Base extends Controls_Stack {
 		$element_type = $this->get_type();
 
 		if ( $this->should_render_shortcode() ) {
-			echo '[elementor-element data="' . esc_attr( base64_encode( wp_json_encode( $this->get_raw_data() ) ) ) . '"]';
+			$unique_id = apply_filters( 'elementor/element_cache/unique_id', '' );
+
+			echo '[elementor-element k="' . esc_attr( $unique_id ) . '" data="' . esc_attr( base64_encode( wp_json_encode( $this->get_raw_data() ) ) ) . '"]';
 			return;
 		}
 
@@ -513,6 +524,8 @@ abstract class Element_Base extends Controls_Stack {
 			echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			$this->after_render();
 
+			// TODO: Remove this in the future
+			// Since version 3.24.0 page scripts/styles are handled by `page_assets`.
 			$this->enqueue_scripts();
 			$this->enqueue_styles();
 		}
@@ -561,10 +574,28 @@ abstract class Element_Base extends Controls_Stack {
 
 		$is_dynamic_content = apply_filters( 'elementor/element/is_dynamic_content', false, $raw_data, $this );
 
-		$has_dynamic_tag = ! empty( $raw_data['settings']['__dynamic__'] );
+		$has_dynamic_tag = $this->has_element_dynamic_tag( $raw_data['settings'] );
 
 		if ( $is_dynamic_content || $has_dynamic_tag ) {
 			return true;
+		}
+
+		return false;
+	}
+
+	private function has_element_dynamic_tag( $element_settings ): bool {
+		if ( is_array( $element_settings ) ) {
+			if ( ! empty( $element_settings['__dynamic__'] ) ) {
+				return true;
+			}
+
+			foreach ( $element_settings as $value ) {
+				$has_dynamic = $this->has_element_dynamic_tag( $value );
+
+				if ( $has_dynamic ) {
+					return true;
+				}
+			}
 		}
 
 		return false;
@@ -674,7 +705,7 @@ abstract class Element_Base extends Controls_Stack {
 	 *
 	 * @return array Element data.
 	 */
-	public static function on_import_update_dynamic_content( array $config, array $data, $controls = null ) : array {
+	public static function on_import_update_dynamic_content( array $config, array $data, $controls = null ): array {
 		$tags_manager = Plugin::$instance->dynamic_tags;
 
 		if ( empty( $config['settings'][ $tags_manager::DYNAMIC_SETTING_KEY ] ) ) {
@@ -739,6 +770,7 @@ abstract class Element_Base extends Controls_Stack {
 			],
 			'data-id' => $id,
 			'data-element_type' => $this->get_type(),
+			'data-e-type' => $this->get_type(),
 		] );
 
 		$class_settings = [];
@@ -765,13 +797,13 @@ abstract class Element_Base extends Controls_Stack {
 
 		$_animation = ! empty( $settings['_animation'] );
 		$animation = ! empty( $settings['animation'] );
-		$has_animation = $_animation && 'none' !== $settings['_animation'] || $animation && 'none' !== $settings['animation'];
+		$has_animation = ( $_animation && 'none' !== $settings['_animation'] ) || ( $animation && 'none' !== $settings['animation'] );
 
 		if ( $has_animation ) {
 			$is_static_render_mode = Plugin::$instance->frontend->is_static_render_mode();
 
 			if ( ! $is_static_render_mode ) {
-				// Hide the element until the animation begins
+				// Hide the element until the animation begins.
 				$this->add_render_attribute( '_wrapper', 'class', 'elementor-invisible' );
 			}
 		}
@@ -801,11 +833,13 @@ abstract class Element_Base extends Controls_Stack {
 	 *
 	 * Previously registered under the Widget_Common class, but registered a more fundamental level now to enable access from other widgets.
 	 *
+	 * @param string $element_selector
+	 * @param string $transform_selector_class
+	 * @return void
 	 * @since 3.9.0
 	 * @access protected
-	 * @return void
 	 */
-	protected function register_transform_section( $element_selector = '' ) {
+	protected function register_transform_section( $element_selector = '', $transform_selector_class = ' > .elementor-widget-container' ) {
 		$default_unit_values_deg = [];
 		$default_unit_values_ms = [];
 
@@ -836,7 +870,6 @@ abstract class Element_Base extends Controls_Stack {
 
 		$transform_prefix_class = 'e-';
 		$transform_return_value = 'transform';
-		$transform_selector_class = ' > .elementor-widget-container';
 		$transform_css_modifier = '';
 
 		if ( 'con' === $element_selector ) {
@@ -901,6 +934,7 @@ abstract class Element_Base extends Controls_Stack {
 					'condition' => [
 						"_transform_rotate_popover{$tab}!" => '',
 					],
+					'frontend_available' => true,
 				]
 			);
 
@@ -1280,7 +1314,7 @@ abstract class Element_Base extends Controls_Stack {
 			'terms' => array_merge( $transform_origin_conditions, $transform_origin_conditions_hover ),
 		];
 
-		// Will override motion effect transform-origin
+		// Will override motion effect transform-origin.
 		$this->add_responsive_control(
 			'motion_fx_transform_x_anchor_point',
 			[
@@ -1308,7 +1342,7 @@ abstract class Element_Base extends Controls_Stack {
 			]
 		);
 
-		// Will override motion effect transform-origin
+		// Will override motion effect transform-origin.
 		$this->add_responsive_control(
 			'motion_fx_transform_y_anchor_point',
 			[
@@ -1461,6 +1495,9 @@ abstract class Element_Base extends Controls_Stack {
 	/**
 	 * A Base method for sanitizing the settings before save.
 	 * This method is meant to be overridden by the element.
+	 *
+	 * @param array $settings
+	 * @return array
 	 */
 	protected function on_save( array $settings ) {
 		return $settings;
@@ -1481,7 +1518,7 @@ abstract class Element_Base extends Controls_Stack {
 	private function get_child_type( $element_data ) {
 		$child_type = $this->_get_default_child_type( $element_data );
 
-		// If it's not a valid widget ( like a deactivated plugin )
+		// If it's not a valid widget ( like a deactivated plugin ).
 		if ( ! $child_type ) {
 			return false;
 		}
@@ -1528,6 +1565,10 @@ abstract class Element_Base extends Controls_Stack {
 		}
 	}
 
+	public function has_widget_inner_wrapper(): bool {
+		return true;
+	}
+
 	/**
 	 * Element base constructor.
 	 *
@@ -1542,7 +1583,7 @@ abstract class Element_Base extends Controls_Stack {
 	 * @param array      $data Optional. Element data. Default is an empty array.
 	 * @param array|null $args Optional. Element default arguments. Default is null.
 	 **/
-	public function __construct( array $data = [], array $args = null ) {
+	public function __construct( array $data = [], ?array $args = null ) {
 		if ( $data ) {
 			$this->is_type_instance = false;
 		} elseif ( $args ) {

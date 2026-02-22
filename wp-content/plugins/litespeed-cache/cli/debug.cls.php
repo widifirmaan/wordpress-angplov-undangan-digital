@@ -1,6 +1,13 @@
 <?php
+/**
+ * Debug API CLI for LiteSpeed integration.
+ *
+ * @package LiteSpeed\CLI
+ */
+
 namespace LiteSpeed\CLI;
-defined('WPINC') || exit();
+
+defined( 'WPINC' ) || exit();
 
 use LiteSpeed\Debug2;
 use LiteSpeed\Report;
@@ -9,15 +16,22 @@ use WP_CLI;
 /**
  * Debug API CLI
  */
-class Debug
-{
-	private $__report;
+class Debug {
 
-	public function __construct()
-	{
-		Debug2::debug('CLI_Debug init');
+	/**
+	 * Report instance.
+	 *
+	 * @var Report
+	 */
+	private $report;
 
-		$this->__report = Report::cls();
+	/**
+	 * Constructor for Debug CLI.
+	 */
+	public function __construct() {
+		Debug2::debug( 'CLI_Debug init' );
+
+		$this->report = Report::cls();
 	}
 
 	/**
@@ -29,11 +43,9 @@ class Debug
 	 *
 	 *     # Send env report to LiteSpeed
 	 *     $ wp litespeed-debug send
-	 *
 	 */
-	public function send()
-	{
-		$num = $this->__report->post_env();
-		WP_CLI::success('Report Number = ' . $num);
+	public function send() {
+		$num = $this->report->post_env();
+		WP_CLI::success( 'Report Number = ' . $num );
 	}
 }

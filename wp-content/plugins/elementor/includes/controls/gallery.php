@@ -32,6 +32,16 @@ class Control_Gallery extends Base_Data_Control {
 		return 'gallery';
 	}
 
+	public function on_export( $settings ) {
+		foreach ( $settings as $attachment ) {
+			if ( ! empty( $attachment['url'] ) ) {
+				do_action( 'elementor/templates/collect_media_url', $attachment['url'], $attachment );
+			}
+		}
+
+		return $settings;
+	}
+
 	/**
 	 * Import gallery images.
 	 *
@@ -41,7 +51,7 @@ class Control_Gallery extends Base_Data_Control {
 	 * @since 1.0.0
 	 * @access public
 	 *
-	 * @param array $settings Control settings
+	 * @param array $settings Control settings.
 	 *
 	 * @return array Control settings.
 	 */
@@ -51,7 +61,18 @@ class Control_Gallery extends Base_Data_Control {
 				continue;
 			}
 
-			$attachment = Plugin::$instance->templates_manager->get_import_images_instance()->import( $attachment );
+			$local_file_path = \Elementor\TemplateLibrary\Classes\Media_Mapper::get_local_file_path( $attachment['url'] );
+			$imported_attachment = false;
+
+			if ( $local_file_path !== $attachment['url'] && file_exists( $local_file_path ) ) {
+				$imported_attachment = Plugin::$instance->templates_manager->get_import_images_instance()->import_local_file( $local_file_path );
+			}
+
+			if ( ! $imported_attachment ) {
+				$imported_attachment = Plugin::$instance->templates_manager->get_import_images_instance()->import( $attachment );
+			}
+
+			$attachment = $imported_attachment;
 		}
 
 		// Filter out attachments that don't exist
@@ -81,9 +102,8 @@ class Control_Gallery extends Base_Data_Control {
 				<div class="elementor-control-media__content elementor-control-tag-area">
 					<div class="elementor-control-gallery-status elementor-control-dynamic-switcher-wrapper">
 						<span class="elementor-control-gallery-status-title"></span>
-						<button class="elementor-control-gallery-clear elementor-control-unit-1 tooltip-target" data-tooltip="<?php echo esc_attr__( 'Clear gallery', 'elementor' ); ?>">
+						<button class="elementor-control-gallery-clear elementor-control-unit-1 tooltip-target" data-tooltip="<?php echo esc_attr__( 'Clear gallery', 'elementor' ); ?>" aria-label="<?php echo esc_attr__( 'Clear gallery', 'elementor' ); ?>">
 							<i class="eicon-trash-o" aria-hidden="true"></i>
-							<span class="elementor-screen-only"><?php echo esc_html__( 'Clear gallery', 'elementor' ); ?></span>
 						</button>
 					</div>
 					<div class="elementor-control-gallery-content">
@@ -92,14 +112,15 @@ class Control_Gallery extends Base_Data_Control {
 							<span><i class="eicon-pencil" aria-hidden="true"></i></span>
 							<span class="elementor-screen-only"><?php echo esc_html__( 'Edit gallery', 'elementor' ); ?></span>
 						</div>
-						<button class="elementor-button elementor-control-gallery-add tooltip-target" data-tooltip="<?php echo esc_attr__( 'Add Images', 'elementor' ); ?>">
+						<button class="elementor-button elementor-control-gallery-add tooltip-target" data-tooltip="<?php echo esc_attr__( 'Add Images', 'elementor' ); ?>" aria-label="<?php echo esc_attr__( 'Add Images', 'elementor' ); ?>">
 							<i class="eicon-plus-circle" aria-hidden="true"></i>
-							<span class="elementor-screen-only"><?php echo esc_html__( 'Add Images', 'elementor' ); ?></span>
 						</button>
 					</div>
 				</div>
 
-				<?php /* ?>
+				<?php
+				/*
+				?>
 				<div class="elementor-control-media__warnings" role="alert" style="display: none;">
 					<?php
 					Hints::get_notice_template( [
@@ -109,27 +130,71 @@ class Control_Gallery extends Base_Data_Control {
 					] );
 					?>
 				</div>
-				<?php */ ?>
-
-				<?php if ( Hints::should_display_hint( 'image-optimization' ) ) : ?>
-				<div class="elementor-control-media__promotions" role="alert" style="display: none;">
-					<?php
-					Hints::get_notice_template( [
-						'display' => ! Hints::is_dismissed( 'image-optimization' ),
-						'type' => 'info',
-						'content' => __( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' ),
-						'icon' => true,
-						'dismissible' => 'image_optimizer_hint',
-						'button_text' => Hints::is_plugin_installed( 'image-optimization' ) ? __( 'Activate Plugin', 'elementor' ) : __( 'Install Plugin', 'elementor' ),
-						'button_event' => 'image_optimizer_hint',
-						'button_data' => [
-							'action_url' => Hints::get_plugin_action_url( 'image-optimization' ),
-						],
-					] ); ?>
-				</div>
-				<?php endif; ?>
-
+				<?php
+				*/ ?>
+				<?php $this->maybe_display_io_hints(); ?>
 			</div>
+		</div>
+		<?php
+	}
+
+	private function maybe_display_io_hints() {
+		$plugin_slug = 'image-optimization';
+
+		if ( ! Hints::should_display_hint( $plugin_slug ) ) {
+			return;
+		}
+
+		$one_subscription = Hints::is_plugin_connected_to_one_subscription();
+		$is_installed = Hints::is_plugin_installed( 'image-optimization' );
+		$is_active = Hints::is_plugin_active( 'image-optimization' );
+
+		if ( $is_active ) {
+			return;
+		}
+
+		if ( $one_subscription ) {
+			if ( ! $is_installed ) {
+				$content = esc_html__( 'Optimize your images to improve site speed and performance. Image Optimizer is included in your ONE subscription.', 'elementor' );
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+				$source = 'io-editor-gallery-one-install';
+			} elseif ( ! $is_active ) {
+				$content = esc_html__( 'Image Optimizer is installed and included in your ONE subscription. Activate it to optimize images and improve site performance.', 'elementor' );
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+				$source = 'io-editor-gallery-one-activate';
+			}
+		} else {
+			$content = esc_html__( 'Optimize your images to enhance site performance by using Image Optimizer.', 'elementor' );
+			if ( ! $is_installed ) {
+				$button_text = esc_html__( 'Install now', 'elementor' );
+				$button_url = Hints::get_plugin_install_url( $plugin_slug );
+				$source = 'io-editor-gallery-install';
+			} elseif ( ! $is_active ) {
+				$button_text = esc_html__( 'Activate now', 'elementor' );
+				$button_url = Hints::get_plugin_activate_url( $plugin_slug );
+				$source = 'io-editor-gallery-activate';
+			}
+		}
+		?>
+		<div class="elementor-control-media__promotions" role="alert">
+			<?php
+			Hints::get_notice_template( [
+				'display' => ! Hints::is_dismissed( $plugin_slug ),
+				'type' => 'info',
+				'icon' => true,
+				'heading' => '',
+				'content' => $content,
+				'dismissible' => 'image_optimizer_hint',
+				'button_text' => $button_text,
+				'button_event' => 'image_optimizer_hint',
+				'button_data' => [
+					'action_url' => $button_url,
+					'source' => $source,
+				],
+			] );
+			?>
 		</div>
 		<?php
 	}

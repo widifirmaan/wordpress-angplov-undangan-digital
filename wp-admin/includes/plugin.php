@@ -1253,7 +1253,20 @@ function validate_plugin_requirements( $plugin ) {
 		);
 	}
 
-	return true;
+	/**
+	 * Filters the plugin requirement validation response.
+	 *
+	 * If a plugin fails due to a Core-provided validation (incompatible WP, PHP versions), this
+	 * filter will not fire. A WP_Error response will already be returned.
+	 *
+	 * This filter is intended to add additional validation steps by site administrators.
+	 *
+	 * @since 6.9.0
+	 *
+	 * @param bool|WP_Error $met_requirements True if the plugin meets requirements, WP_Error if not.
+	 * @param string $plugin Path to the plugin file relative to the plugins directory.
+	 */
+	return apply_filters( 'validate_plugin_requirements', true, $plugin );
 }
 
 /**
@@ -2610,7 +2623,7 @@ function deactivated_plugins_notice() {
 
 	if ( false === $blog_deactivated_plugins ) {
 		// Option not in database, add an empty array to avoid extra DB queries on subsequent loads.
-		update_option( 'wp_force_deactivated_plugins', array() );
+		update_option( 'wp_force_deactivated_plugins', array(), false );
 	}
 
 	if ( is_multisite() ) {
@@ -2664,7 +2677,7 @@ function deactivated_plugins_notice() {
 	}
 
 	// Empty the options.
-	update_option( 'wp_force_deactivated_plugins', array() );
+	update_option( 'wp_force_deactivated_plugins', array(), false );
 	if ( is_multisite() ) {
 		update_site_option( 'wp_force_deactivated_plugins', array() );
 	}

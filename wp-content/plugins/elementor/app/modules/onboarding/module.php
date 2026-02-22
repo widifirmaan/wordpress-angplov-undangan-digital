@@ -6,13 +6,13 @@ use Elementor\Core\Base\Module as BaseModule;
 use Elementor\Core\Common\Modules\Ajax\Module as Ajax;
 use Elementor\Core\Common\Modules\Connect\Apps\Library;
 use Elementor\Core\Files\Uploads_Manager;
+use Elementor\Includes\EditorAssetsAPI;
 use Elementor\Plugin;
-use Elementor\Tracker;
 use Elementor\Utils;
 use Plugin_Upgrader;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 /**
@@ -27,6 +27,13 @@ class Module extends BaseModule {
 	const VERSION = '1.0.0';
 	const ONBOARDING_OPTION = 'elementor_onboarded';
 
+	const EXPERIMENT_EMPHASIZE_CONNECT_BENEFITS = 'emphasizeConnectBenefits101';
+	const EXPERIMENT_EMPHASIZE_THEME_VALUE_AUDIENCE_202 = 'emphasizeThemeValueAudience202';
+	const EXPERIMENT_UPDATE_COPY_VISUALS = 'updateCopyVisuals401';
+	const EXPERIMENT_REDUCE_HIERARCHY_BLANK_OPTION = 'reduceHierarchyBlankOption402';
+
+	private ?API $editor_assets_api = null;
+
 	/**
 	 * Get name.
 	 *
@@ -37,6 +44,42 @@ class Module extends BaseModule {
 	 */
 	public function get_name() {
 		return 'onboarding';
+	}
+
+	private function is_experiment_enabled( string $experiment_key ) {
+		$editor_assets_api = $this->get_editor_assets_api();
+
+		if ( null === $editor_assets_api ) {
+			return false;
+		}
+
+		return $editor_assets_api->is_experiment_enabled( $experiment_key );
+	}
+
+	private function is_hello_theme_activated(): bool {
+		$current_theme = get_option( 'template' );
+		$hello_theme_variants = [ 'hello-elementor', 'hello-biz', 'hello-commerce', 'hello-theme' ];
+
+		return in_array( $current_theme, $hello_theme_variants, true );
+	}
+
+	private function get_editor_assets_api(): ?API {
+		if ( null !== $this->editor_assets_api ) {
+			return $this->editor_assets_api;
+		}
+
+		$editor_assets_api_instance = new EditorAssetsAPI( $this->get_editor_assets_api_config() );
+		$this->editor_assets_api = new API( $editor_assets_api_instance );
+
+		return $this->editor_assets_api;
+	}
+
+	private function get_editor_assets_api_config(): array {
+		return [
+			EditorAssetsAPI::ASSETS_DATA_URL => 'https://assets.elementor.com/ab-testing/v1/ab-testing.json',
+			EditorAssetsAPI::ASSETS_DATA_TRANSIENT_KEY => '_elementor_ab_testing_data',
+			EditorAssetsAPI::ASSETS_DATA_KEY => 'ab-testing',
+		];
 	}
 
 	/**
@@ -69,6 +112,7 @@ class Module extends BaseModule {
 
 		/** @var Library $library */
 		$library = Plugin::$instance->common->get_component( 'connect' )->get_app( 'library' );
+		$is_editor_one_active = Plugin::$instance->experiments->is_feature_active( 'e_editor_one' );
 
 		Plugin::$instance->app->set_settings( 'onboarding', [
 			'eventPlacement' => 'Onboarding wizard',
@@ -77,13 +121,21 @@ class Module extends BaseModule {
 			'isLibraryConnected' => $library->is_connected(),
 			// Used to check if the Hello Elementor theme is installed but not activated.
 			'helloInstalled' => empty( $hello_theme_errors['theme_not_found'] ),
-			'helloActivated' => 'hello-elementor' === get_option( 'template' ),
+			'helloActivated' => $this->is_hello_theme_activated(),
 			// The "Use Hello theme on my site" checkbox should be checked by default only if this condition is met.
 			'helloOptOut' => count( $pages_and_posts->posts ) < 5,
 			'siteName' => esc_html( $site_name ),
 			'isUnfilteredFilesEnabled' => Uploads_Manager::are_unfiltered_uploads_enabled(),
+			'isEditorOneActive' => $is_editor_one_active,
 			'urls' => [
-				'kitLibrary' => Plugin::$instance->app->get_base_url() . '#/kit-library?order[direction]=desc&order[by]=featuredIndex',
+				'kitLibrary' => Plugin::$instance->app->get_base_url() . '&source=onboarding#/kit-library?order[direction]=desc&order[by]=featuredIndex',
+				'sitePlanner' => add_query_arg( [
+					'type' => 'editor',
+					'siteUrl' => esc_url( home_url() ),
+					'siteName' => esc_html( $site_name ),
+					'siteDescription' => esc_html( get_bloginfo( 'description' ) ),
+					'siteLanguage' => get_locale(),
+				], 'https://planner.elementor.com/onboarding.html' ),
 				'createNewPage' => Plugin::$instance->documents->get_create_new_post_url(),
 				'connect' => $library->get_admin_url( 'authorize', [
 					'utm_source' => 'onboarding-wizard',
@@ -114,7 +166,19 @@ class Module extends BaseModule {
 				'downloadPro' => '?utm_source=onboarding-wizard&utm_campaign=my-account-subscriptions&utm_medium=wp-dash&utm_content=import-pro-plugin&utm_term=' . self::VERSION,
 			],
 			'nonce' => wp_create_nonce( 'onboarding' ),
-			'experiment' => Plugin::$instance->experiments->is_feature_active( 'e_onboarding' ),
+			'experiment' => true,
+			'isExperiment101Enabled' => $this->is_experiment_enabled( self::EXPERIMENT_EMPHASIZE_CONNECT_BENEFITS ),
+			'isExperiment202Enabled' => $this->is_experiment_enabled( self::EXPERIMENT_EMPHASIZE_THEME_VALUE_AUDIENCE_202 ),
+			'isExperiment401Enabled' => $this->is_experiment_enabled( self::EXPERIMENT_UPDATE_COPY_VISUALS ),
+			'isExperiment402Enabled' => $this->is_experiment_enabled( self::EXPERIMENT_REDUCE_HIERARCHY_BLANK_OPTION ),
+			'experimentNames' => [
+				'101' => self::EXPERIMENT_EMPHASIZE_CONNECT_BENEFITS,
+				'202' => self::EXPERIMENT_EMPHASIZE_THEME_VALUE_AUDIENCE_202,
+				'401' => self::EXPERIMENT_UPDATE_COPY_VISUALS,
+				'402' => self::EXPERIMENT_REDUCE_HIERARCHY_BLANK_OPTION,
+			],
+			'pageSubheading' => $is_editor_one_active ? __( 'Choose the capabilities you need to bring your vision to life', 'elementor' ) : __( 'Which Elementor Pro features do you need to bring your creative vision to life?', 'elementor' ),
+			'pageHeading' => $is_editor_one_active ? __( ' Elevate your website with additional features.', 'elementor' ) : __( 'Elevate your website with additional Pro features.', 'elementor' ),
 		] );
 	}
 
@@ -258,7 +322,7 @@ class Module extends BaseModule {
 	private function maybe_upload_logo_image() {
 		$error_message = esc_html__( 'There was a problem uploading your file.', 'elementor' );
 
-		$file = Utils::get_super_global_value( $_FILES, 'fileToUpload' );
+		$file = Utils::get_super_global_value( $_FILES, 'fileToUpload' ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! is_array( $file ) || empty( $file['type'] ) ) {
@@ -319,7 +383,13 @@ class Module extends BaseModule {
 			return $this->get_permission_error_response();
 		}
 
-		switch_theme( 'hello-elementor' );
+		$theme_slug = Utils::get_super_global_value( $_POST, 'theme_slug' ) ?? 'hello-biz'; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$allowed_themes = [ 'hello-elementor', 'hello-biz' ];
+		if ( ! in_array( $theme_slug, $allowed_themes, true ) ) {
+			$theme_slug = 'hello-biz';
+		}
+
+		switch_theme( $theme_slug );
 
 		return [
 			'status' => 'success',
@@ -343,7 +413,7 @@ class Module extends BaseModule {
 
 		$error_message = esc_html__( 'There was a problem uploading your file.', 'elementor' );
 
-		$file = Utils::get_super_global_value( $_FILES, 'fileToUpload' ) ?? [];
+		$file = Utils::get_super_global_value( $_FILES, 'fileToUpload' ) ?? []; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! is_array( $file ) || empty( $file['type'] ) ) {
@@ -413,9 +483,8 @@ class Module extends BaseModule {
 	 * Maybe Handle Ajax
 	 *
 	 * This method checks if there are any AJAX actions being
-	 * @since 3.6.0
 	 *
-	 * @return array|null
+	 * @since 3.6.0
 	 */
 	private function maybe_handle_ajax() {
 		$result = [];
@@ -423,7 +492,7 @@ class Module extends BaseModule {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		switch ( Utils::get_super_global_value( $_POST, 'action' ) ) {
 			case 'elementor_update_site_name':
-				// If no value is passed for any reason, no need ot update the site name.
+				// If no value is passed for any reason, no need to update the site name.
 				$result = $this->maybe_update_site_name();
 				break;
 			case 'elementor_update_site_logo':
@@ -440,6 +509,10 @@ class Module extends BaseModule {
 				break;
 			case 'elementor_update_onboarding_option':
 				$result = $this->maybe_update_onboarding_db_option();
+				break;
+			case 'elementor_save_onboarding_features':
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing
+				$result = $this->get_component( 'features_usage' )->save_onboarding_features( Utils::get_super_global_value( $_POST, 'data' ) ?? [] );
 		}
 
 		if ( ! empty( $result ) ) {
@@ -452,6 +525,8 @@ class Module extends BaseModule {
 	}
 
 	public function __construct() {
+		$this->add_component( 'features_usage', new Features_Usage() );
+
 		add_action( 'elementor/init', function() {
 			// Only load when viewing the onboarding app.
 			if ( Plugin::$instance->app->is_current() ) {
@@ -483,5 +558,7 @@ class Module extends BaseModule {
 				$this->maybe_handle_ajax();
 			}
 		} );
+
+		$this->get_component( 'features_usage' )->register();
 	}
 }

@@ -4,7 +4,7 @@ namespace Elementor\Data\V2\Base;
 use Elementor\Data\V2\Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 abstract class Endpoint extends Base_Route {
@@ -137,16 +137,16 @@ abstract class Endpoint extends Base_Route {
 	/**
 	 * Endpoint constructor.
 	 *
-	 * @param \Elementor\Data\V2\Base\Controller|\Elementor\Data\V2\Base\Endpoint $parent
-	 * @param string $route
+	 * @param \Elementor\Data\V2\Base\Controller|\Elementor\Data\V2\Base\Endpoint $parent_endpoint
+	 * @param string                                                              $route
 	 */
-	public function __construct( $parent, $route = '/' ) {
-		$controller = $parent;
-		$this->parent = $parent;
+	public function __construct( $parent_endpoint, $route = '/' ) {
+		$controller = $parent_endpoint;
+		$this->parent = $parent_endpoint;
 
 		// In case, its behave like sub-endpoint.
-		if ( ! ( $parent instanceof Controller ) ) {
-			$controller = $parent->get_controller();
+		if ( ! ( $parent_endpoint instanceof Controller ) ) {
+			$controller = $parent_endpoint->get_controller();
 		}
 
 		parent::__construct( $controller, $route );

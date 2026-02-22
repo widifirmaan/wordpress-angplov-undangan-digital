@@ -178,7 +178,7 @@
           
           global $pagenow;
           
-          if ($pagenow == 'post.php' || $pagenow == 'profile.php') {
+          if ($pagenow == 'post.php' || $pagenow == 'profile.php' || $pagenow == 'post-new.php') {
             return false;
           }
 

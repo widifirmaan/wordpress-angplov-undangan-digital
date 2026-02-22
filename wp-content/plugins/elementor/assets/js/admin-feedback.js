@@ -1,4 +1,3 @@
-/*! elementor - v3.23.0 - 25-07-2024 */
 /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
@@ -40,8 +39,7 @@ module.exports = wp.i18n;
 /******/ 	}
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
 (() => {
 /*!************************************************!*\
   !*** ../assets/dev/js/admin/admin-feedback.js ***!

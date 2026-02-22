@@ -13,7 +13,7 @@ class GroupBuilder extends ContainerBuilder {
 	 * @return \YahnisElsts\AdminMenuEditor\Customizable\Controls\ControlGroup
 	 */
 	public function build() {
-		return new Controls\ControlGroup($this->title, $this->buildChildren(), $this->params);
+		return new Controls\ControlGroup($this->title, $this->params, $this->buildChildren());
 	}
 
 	public function stacked($isStacked = true) {

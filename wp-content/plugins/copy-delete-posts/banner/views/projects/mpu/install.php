@@ -10,7 +10,7 @@
 
 <div class="ci-left-part ci-install-state">
   <div class="ci-project-logo">
-    <a href="https://mypoups.com" target="_blank">
+    <a href="https://mypopups.com" target="_blank">
       <img src="<?php $this->_asset('/projects/mpu/imgs/big-colored-logo.png'); ?>">
     </a>
     <img src="<?php $this->_asset('/static/imgs/rating.svg'); ?>" class="ci-rating" >

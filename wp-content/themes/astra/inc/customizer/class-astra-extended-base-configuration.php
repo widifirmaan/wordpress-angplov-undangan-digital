@@ -14,7 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class Astra_Extended_Base_Configuration.
  */
 final class Astra_Extended_Base_Configuration {
-
 	/**
 	 * Member Variable
 	 *
@@ -37,15 +36,17 @@ final class Astra_Extended_Base_Configuration {
 	/**
 	 * Constructor
 	 */
-	public function __construct() { }
+	public function __construct() {
+	}
 
 	/**
 	 * Prepare Advance header configuration.
 	 *
-	 * @param string $section_id section id.
+	 * @param string $section_id Section ID.
+	 * @param string $heading_class Optional. Heading class. Defaults to 'ast-top-section-divider'.
 	 * @return array
 	 */
-	public static function prepare_advanced_tab( $section_id ) {
+	public static function prepare_advanced_tab( $section_id, $heading_class = 'ast-top-section-divider' ) {
 
 		return array(
 
@@ -61,7 +62,7 @@ final class Astra_Extended_Base_Configuration {
 				'priority' => 210,
 				'settings' => array(),
 				'context'  => Astra_Builder_Helper::$design_tab,
-				'divider'  => array( 'ast_class' => 'ast-top-section-spacing' ),
+				'divider'  => array( 'ast_class' => $heading_class ),
 			),
 
 			/**
@@ -86,7 +87,7 @@ final class Astra_Extended_Base_Configuration {
 					'left'   => __( 'Left', 'astra' ),
 				),
 				'context'           => Astra_Builder_Helper::$design_tab,
-				'divider'           => array( 'ast_class' => 'ast-section-spacing ast-bottom-section-divider' ),
+				'divider'           => array( 'ast_class' => 'ast-section-spacing' ),
 			),
 
 			/**
@@ -111,6 +112,7 @@ final class Astra_Extended_Base_Configuration {
 					'left'   => __( 'Left', 'astra' ),
 				),
 				'context'           => Astra_Builder_Helper::$design_tab,
+				'divider'           => array( 'ast_class' => 'ast-top-section-divider' ),
 			),
 		);
 	}
@@ -131,11 +133,11 @@ final class Astra_Extended_Base_Configuration {
 				'default'   => astra_get_option( $section_id . '-border-group' ),
 				'type'      => 'control',
 				'control'   => 'ast-settings-group',
-				'title'     => __( 'Border', 'astra-addon' ),
+				'title'     => __( 'Border', 'astra' ),
 				'section'   => $section_id,
 				'transport' => 'postMessage',
 				'priority'  => 150,
-				'divider'   => true === $skip_border_divider ? array( 'ast_class' => 'ast-top-section-spacing' ) : array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'divider'   => true === $skip_border_divider ? array( 'ast_class' => 'ast-top-section-spacing' ) : array( 'ast_class' => 'ast-top-divider' ),
 				'context'   => Astra_Builder_Helper::$design_tab,
 			),
 			array(
@@ -145,16 +147,16 @@ final class Astra_Extended_Base_Configuration {
 				'type'           => 'sub-control',
 				'transport'      => 'postMessage',
 				'control'        => 'ast-border',
-				'title'          => __( 'Border Width', 'astra-addon' ),
-				'divider'        => array( 'ast_class' => 'ast-bottom-dotted-divider' ),
+				'title'          => __( 'Border Width', 'astra' ),
+				'divider'        => array( 'ast_class' => 'ast-bottom-divider' ),
 				'section'        => $section_id,
 				'linked_choices' => true,
 				'priority'       => 1,
 				'choices'        => array(
-					'top'    => __( 'Top', 'astra-addon' ),
-					'right'  => __( 'Right', 'astra-addon' ),
-					'bottom' => __( 'Bottom', 'astra-addon' ),
-					'left'   => __( 'Left', 'astra-addon' ),
+					'top'    => __( 'Top', 'astra' ),
+					'right'  => __( 'Right', 'astra' ),
+					'bottom' => __( 'Bottom', 'astra' ),
+					'left'   => __( 'Left', 'astra' ),
 				),
 			),
 			array(
@@ -167,7 +169,7 @@ final class Astra_Extended_Base_Configuration {
 				'control'           => 'ast-color',
 				'sanitize_callback' => array( 'Astra_Customizer_Sanitizes', 'sanitize_alpha_color' ),
 				'transport'         => 'postMessage',
-				'title'             => __( 'Color', 'astra-addon' ),
+				'title'             => __( 'Color', 'astra' ),
 				'divider'           => array( 'ast_class' => 'ast-top-spacing ast-bottom-spacing' ),
 			),
 			array(
@@ -177,16 +179,16 @@ final class Astra_Extended_Base_Configuration {
 				'type'           => 'sub-control',
 				'transport'      => 'postMessage',
 				'control'        => 'ast-border',
-				'title'          => __( 'Border Radius', 'astra-addon' ),
-				'divider'        => array( 'ast_class' => 'ast-top-dotted-divider' ),
+				'title'          => __( 'Border Radius', 'astra' ),
+				'divider'        => array( 'ast_class' => 'ast-top-divider' ),
 				'section'        => $section_id,
 				'linked_choices' => true,
 				'priority'       => 1,
 				'choices'        => array(
-					'top'    => __( 'Top', 'astra-addon' ),
-					'right'  => __( 'Right', 'astra-addon' ),
-					'bottom' => __( 'Bottom', 'astra-addon' ),
-					'left'   => __( 'Left', 'astra-addon' ),
+					'top'    => __( 'Top', 'astra' ),
+					'right'  => __( 'Right', 'astra' ),
+					'bottom' => __( 'Bottom', 'astra' ),
+					'left'   => __( 'Left', 'astra' ),
 				),
 			),
 		);

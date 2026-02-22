@@ -64,6 +64,8 @@ class Repository {
 	 * @param array $options
 	 *
 	 * @return array|null
+	 *
+	 * @throws WP_Error_Exception If kit is not found.
 	 */
 	public function find( $id, $options = [] ) {
 		$options = wp_parse_args( $options, [
@@ -85,7 +87,7 @@ class Repository {
 			$manifest = $this->api->get_manifest( $id );
 
 			if ( is_wp_error( $manifest ) ) {
-				throw new WP_Error_Exception( $manifest );
+				throw new WP_Error_Exception( esc_html( $manifest ) );
 			}
 		}
 
@@ -123,12 +125,14 @@ class Repository {
 	 * @param $id
 	 *
 	 * @return array
+	 *
+	 * @throws WP_Error_Exception If download link retrieval fails or API errors occur.
 	 */
 	public function get_download_link( $id ) {
 		$response = $this->api->download_link( $id );
 
 		if ( is_wp_error( $response ) ) {
-			throw new WP_Error_Exception( $response );
+			throw new WP_Error_Exception( esc_html( $response ) );
 		}
 
 		return [ 'download_link' => $response->download_link ];
@@ -138,7 +142,8 @@ class Repository {
 	 * @param $id
 	 *
 	 * @return array
-	 * @throws \Exception
+	 *
+	 * @throws Error_404 If kit is not found.
 	 */
 	public function add_to_favorites( $id ) {
 		$kit = $this->find( $id, [ 'manifest_included' => false ] );
@@ -158,7 +163,8 @@ class Repository {
 	 * @param $id
 	 *
 	 * @return array
-	 * @throws \Exception
+	 *
+	 * @throws Error_404 If kit is not found.
 	 */
 	public function remove_from_favorites( $id ) {
 		$kit = $this->find( $id, [ 'manifest_included' => false ] );
@@ -178,6 +184,8 @@ class Repository {
 	 * @param bool $force_api_request
 	 *
 	 * @return Collection
+	 *
+	 * @throws WP_Error_Exception If kits data retrieval fails.
 	 */
 	private function get_kits_data( $force_api_request = false ) {
 		$data = get_transient( static::KITS_CACHE_KEY );
@@ -204,7 +212,7 @@ class Repository {
 			$data = $this->api->get_all( $args );
 
 			if ( is_wp_error( $data ) ) {
-				throw new WP_Error_Exception( $data );
+				throw new WP_Error_Exception( esc_html( $data ) );
 			}
 
 			set_transient( static::KITS_CACHE_KEY, $data, static::KITS_CACHE_TTL_HOURS * HOUR_IN_SECONDS );
@@ -217,6 +225,8 @@ class Repository {
 	 * @param bool $force_api_request
 	 *
 	 * @return Collection
+	 *
+	 * @throws WP_Error_Exception If taxonomies data retrieval fails.
 	 */
 	private function get_taxonomies_data( $force_api_request = false ) {
 		$data = get_transient( static::KITS_TAXONOMIES_CACHE_KEY );
@@ -225,7 +235,7 @@ class Repository {
 			$data = $this->api->get_taxonomies();
 
 			if ( is_wp_error( $data ) ) {
-				throw new WP_Error_Exception( $data );
+				throw new WP_Error_Exception( esc_html( $data ) );
 			}
 
 			set_transient( static::KITS_TAXONOMIES_CACHE_KEY, $data, static::KITS_TAXONOMIES_CACHE_TTL_HOURS * HOUR_IN_SECONDS );
@@ -276,7 +286,6 @@ class Repository {
 				'popularity_index' => isset( $kit->popularity_index ) ? $kit->popularity_index : 0,
 				'created_at' => isset( $kit->created_at ) ? $kit->created_at : null,
 				'updated_at' => isset( $kit->updated_at ) ? $kit->updated_at : null,
-				//
 			],
 			$manifest ? $this->transform_manifest_api_response( $manifest ) : []
 		);

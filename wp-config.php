@@ -39,8 +39,8 @@ define( 'DB_CHARSET', 'utf8' );
 /** The database collate type. Don't change this if in doubt. */
 define( 'DB_COLLATE', '' );
 
-define( 'WP_HOME', 'http://undangan.widifirmaan.web.id' );
-define( 'WP_SITEURL', 'http://undangan.widifirmaan.web.id' );
+define( 'WP_HOME', 'http://localhost:8084' );
+define( 'WP_SITEURL', 'http://localhost:8084' );
 
 /**#@+
  * Authentication unique keys and salts.

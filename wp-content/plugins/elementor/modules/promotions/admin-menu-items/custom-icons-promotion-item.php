@@ -3,7 +3,7 @@
 namespace Elementor\Modules\Promotions\AdminMenuItems;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Custom_Icons_Promotion_Item extends Base_Promotion_Template {
@@ -19,9 +19,9 @@ class Custom_Icons_Promotion_Item extends Base_Promotion_Template {
 		return esc_html__( 'Custom Icons', 'elementor' );
 	}
 
-	protected function get_promotion_title():string {
+	protected function get_promotion_title(): string {
 		return sprintf(
-			/* translators: %s: br  */
+			/* translators: %s: `<br>` tag. */
 			esc_html__( 'Enjoy creative freedom %s with Custom Icons', 'elementor' ),
 			'<br />'
 		);
@@ -30,6 +30,7 @@ class Custom_Icons_Promotion_Item extends Base_Promotion_Template {
 	protected function get_content_lines(): array {
 		return [
 			sprintf(
+				/* translators: %s: `<br>` tag. */
 				esc_html__( 'Expand your icon library beyond FontAwesome and add icon %s libraries of your choice', 'elementor' ),
 				'<br />'
 			),

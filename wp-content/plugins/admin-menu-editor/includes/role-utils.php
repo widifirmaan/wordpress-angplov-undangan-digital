@@ -79,6 +79,52 @@ class ameRoleUtils {
 		//Requires WP 4.3.0.
 		return wp_roles();
 	}
+
+	/**
+	 * Get the user object based on a user ID.
+	 *
+	 * In most cases, when this plugin needs to retrieve a user, it is the current user. This method
+	 * attempts to make that common case faster and avoid creating duplicate WP_User instances.
+	 *
+	 * Note: This was originally a private method in the core class. It was moved here to make it
+	 * available to other modules. Compatibility-related comments and special cases were kept.
+	 *
+	 * @param int $user_id
+	 * @return WP_User|null
+	 */
+	public static function get_user_by_id($user_id) {
+		static $isGettingCurrentUser = false;
+
+		//Usually, pluggable functions will already be loaded by this point,
+		//but there is at least one plugin that indirectly triggers this method
+		//before wp_get_current_user() is available by checking user caps early.
+		//
+		//At least one plugin can enter infinite recursion if we call wp_get_current_user()
+		//here. To prevent that, avoid nested calls and fall back to get_user_by().
+		if ( function_exists('wp_get_current_user') && !$isGettingCurrentUser ) {
+			$isGettingCurrentUser = true;
+			try {
+				$current_user = wp_get_current_user();
+			} finally {
+				$isGettingCurrentUser = false;
+			}
+
+			if ( $current_user && ($current_user->ID == $user_id) ) {
+				return $current_user;
+			}
+		}
+
+		if ( function_exists('get_user_by') ) {
+			$user = get_user_by('id', $user_id);
+			if ( $user === false ) {
+				return null;
+			} else {
+				return $user;
+			}
+		}
+
+		return null;
+	}
 }
 
 class ameActorAccessCleaner {
@@ -207,6 +253,20 @@ abstract class ameAccessEvaluatorConfigFields {
 	 * @var bool
 	 */
 	protected $defaultEvaluationResult = false;
+
+	public function configToJs() {
+		$roleDefault = $this->roleDefaultAccess;
+		if ( ($roleDefault === null) && !empty($this->perRoleDefaultAccess) ) {
+			$roleDefault = $this->perRoleDefaultAccess;
+		}
+
+		return [
+			'noValueDefault'      => $this->defaultEvaluationResult,
+			'roleDefault'         => $roleDefault,
+			'superAdminDefault'   => $this->superAdminDefaultAccess,
+			'roleCombinationMode' => 'Some',
+		];
+	}
 }
 
 class ameAccessEvaluatorBuilder extends ameAccessEvaluatorConfigFields {

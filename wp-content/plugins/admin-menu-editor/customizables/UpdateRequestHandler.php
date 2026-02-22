@@ -4,6 +4,9 @@ namespace YahnisElsts\AdminMenuEditor\Customizable;
 
 use WP_Error;
 
+/**
+ * @deprecated
+ */
 class UpdateRequestHandler {
 	protected $reservedFields = ['action', '_wpnonce', '_ajax_nonce', '_wp_http_referer'];
 

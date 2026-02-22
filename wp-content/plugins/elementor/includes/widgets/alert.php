@@ -79,6 +79,24 @@ class Widget_Alert extends Widget_Base {
 	}
 
 	/**
+	 * Get style dependencies.
+	 *
+	 * Retrieve the list of style dependencies the widget requires.
+	 *
+	 * @since 3.24.0
+	 * @access public
+	 *
+	 * @return array Widget style dependencies.
+	 */
+	public function get_style_depends(): array {
+		return [ 'widget-alert' ];
+	}
+
+	public function has_widget_inner_wrapper(): bool {
+		return ! Plugin::$instance->experiments->is_feature_active( 'e_optimized_markup' );
+	}
+
+	/**
 	 * Register alert widget controls.
 	 *
 	 * Adds different input fields to allow the user to change and customize the widget settings.
@@ -208,10 +226,10 @@ class Widget_Alert extends Widget_Base {
 		$this->add_control(
 			'border_color',
 			[
-				'label' => esc_html__( 'Border Color', 'elementor' ),
+				'label' => esc_html__( 'Side Border Color', 'elementor' ),
 				'type' => Controls_Manager::COLOR,
 				'selectors' => [
-					'{{WRAPPER}} .elementor-alert' => 'border-color: {{VALUE}};',
+					'{{WRAPPER}} .elementor-alert' => 'border-inline-start-color: {{VALUE}};',
 				],
 			]
 		);
@@ -219,7 +237,7 @@ class Widget_Alert extends Widget_Base {
 		$this->add_control(
 			'border_left-width',
 			[
-				'label' => esc_html__( 'Left Border Width', 'elementor' ),
+				'label' => esc_html__( 'Side Border Width', 'elementor' ),
 				'type' => Controls_Manager::SLIDER,
 				'size_units' => [ 'px', '%', 'em', 'rem', 'custom' ],
 				'range' => [
@@ -231,7 +249,7 @@ class Widget_Alert extends Widget_Base {
 					],
 				],
 				'selectors' => [
-					'{{WRAPPER}} .elementor-alert' => 'border-left-width: {{SIZE}}{{UNIT}};',
+					'{{WRAPPER}} .elementor-alert' => 'border-inline-start-width: {{SIZE}}{{UNIT}};',
 				],
 			]
 		);
@@ -477,22 +495,21 @@ class Widget_Alert extends Widget_Base {
 		<div <?php $this->print_render_attribute_string( 'alert_wrapper' ); ?>>
 
 			<?php if ( ! Utils::is_empty( $settings['alert_title'] ) ) : ?>
-			<span <?php $this->print_render_attribute_string( 'alert_title' ); ?>><?php $this->print_unescaped_setting( 'alert_title' ); ?></span>
+			<span <?php $this->print_render_attribute_string( 'alert_title' ); ?>><?php echo wp_kses_post( $settings['alert_title'] ); ?></span>
 			<?php endif; ?>
 
 			<?php if ( ! Utils::is_empty( $settings['alert_description'] ) ) : ?>
-			<span <?php $this->print_render_attribute_string( 'alert_description' ); ?>><?php $this->print_unescaped_setting( 'alert_description' ); ?></span>
+			<span <?php $this->print_render_attribute_string( 'alert_description' ); ?>><?php echo wp_kses_post( $settings['alert_description'] ); ?></span>
 			<?php endif; ?>
 
 			<?php if ( 'show' === $settings['show_dismiss'] ) : ?>
-			<button type="button" class="elementor-alert-dismiss">
+			<button type="button" class="elementor-alert-dismiss" aria-label="<?php echo esc_attr__( 'Dismiss this alert.', 'elementor' ); ?>">
 				<?php
 				if ( ! empty( $settings['dismiss_icon']['value'] ) ) {
 					Icons_Manager::render_icon( $settings['dismiss_icon'], [ 'aria-hidden' => 'true' ] );
 				} else { ?>
 					<span aria-hidden="true">&times;</span>
 				<?php } ?>
-				<span class="elementor-screen-only"><?php echo esc_html__( 'Dismiss this alert.', 'elementor' ); ?></span>
 			</button>
 			<?php endif; ?>
 
@@ -533,21 +550,20 @@ class Widget_Alert extends Widget_Base {
 		<div {{{ view.getRenderAttributeString( 'alert_wrapper' ) }}}>
 
 			<# if ( settings.alert_title ) { #>
-			<span {{{ view.getRenderAttributeString( 'alert_title' ) }}}>{{{ settings.alert_title }}}</span>
+			<span {{{ view.getRenderAttributeString( 'alert_title' ) }}}>{{ settings.alert_title }}</span>
 			<# } #>
 
 			<# if ( settings.alert_description ) { #>
-			<span {{{ view.getRenderAttributeString( 'alert_description' ) }}}>{{{ settings.alert_description }}}</span>
+			<span {{{ view.getRenderAttributeString( 'alert_description' ) }}}>{{ settings.alert_description }}</span>
 			<# } #>
 
 			<# if ( 'show' === settings.show_dismiss ) { #>
-			<button type="button" class="elementor-alert-dismiss">
+			<button type="button" class="elementor-alert-dismiss" aria-label="<?php echo esc_attr__( 'Dismiss this alert.', 'elementor' ); ?>">
 				<# if ( iconHTML && iconHTML.rendered && ( ! settings.icon || migrated ) ) { #>
 				{{{ iconHTML.value }}}
 				<# } else { #>
 					<span aria-hidden="true">&times;</span>
 				<# } #>
-				<span class="elementor-screen-only"><?php echo esc_html__( 'Dismiss this alert.', 'elementor' ); ?></span>
 			</button>
 			<# } #>
 

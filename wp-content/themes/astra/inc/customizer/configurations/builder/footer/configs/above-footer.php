@@ -2,9 +2,7 @@
 /**
  * Above footer Configuration.
  *
- * @author      Astra
  * @package     Astra
- * @copyright   Copyright (c) 2023, Astra
  * @link        https://wpastra.com/
  * @since       4.5.2
  */
@@ -90,7 +88,7 @@ function astra_above_footer_configuration() {
 				'footer'     => 'above',
 				'layout'     => Astra_Builder_Helper::$footer_row_layouts,
 			),
-			'divider'     => array( 'ast_class' => 'ast-top-dotted-divider ast-bottom-section-divider' ),
+			'divider'     => array( 'ast_class' => 'ast-top-divider ast-bottom-section-divider' ),
 			'transport'   => 'postMessage',
 		),
 
@@ -192,7 +190,7 @@ function astra_above_footer_configuration() {
 				'step' => 1,
 				'max'  => 600,
 			),
-			'divider'     => array( 'ast_class' => 'ast-section-spacing ast-bottom-dotted-divider' ),
+			'divider'     => array( 'ast_class' => 'ast-section-spacing ast-bottom-divider' ),
 			'context'     => Astra_Builder_Helper::$design_tab,
 		),
 
@@ -267,5 +265,5 @@ function astra_above_footer_configuration() {
 }
 
 if ( Astra_Builder_Customizer::astra_collect_customizer_builder_data() ) {
-	astra_above_footer_configuration();
+	add_action( 'init', 'astra_above_footer_configuration' );
 }

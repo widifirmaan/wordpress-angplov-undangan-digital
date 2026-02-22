@@ -11,12 +11,17 @@ use DateTimeZone;
 use Exception;
 use WP_Error;
 use WP_User;
+use YahnisElsts\AdminMenuEditor\Customizable\Schemas\SchemaFactory;
+use YahnisElsts\AdminMenuEditor\Options\None;
 use YahnisElsts\AdminMenuEditor\Options\Option;
 use YahnisElsts\AdminMenuEditor\Options\Some;
-use YahnisElsts\AdminMenuEditor\Options\None;
+use YahnisElsts\AdminMenuEditor\Utils\Forms\KnockoutSaveForm;
+use YahnisElsts\AjaxActionWrapper\v2\Action;
+use function YahnisElsts\AdminMenuEditor\Collections\w;
 
 class Module extends amePersistentModule {
 	const FILTER_PRIORITY = 1000000;
+	const DEFAULT_SETTING_ACTOR_ID = 'special:default';
 	const UI_SCRIPT_HANDLE = 'ame-redirector-ui';
 
 	const FIRST_LOGIN_AGE_LIMIT_IN_DAYS = 14;
@@ -69,14 +74,16 @@ class Module extends amePersistentModule {
 		}
 
 		if ( is_admin() ) {
-			$this->searchUsersAction = ajaw_v1_CreateAction('ws-ame-rui-search-users')
-				->requiredParam('term')
+			$this->searchUsersAction = Action::builder('ws-ame-rui-search-users')
+				->requiredParam('term', Action::PARSE_STRING)
 				->method('get')
 				->permissionCallback([$this, 'userCanSearchUsers'])
 				->handler([$this, 'ajaxSearchUsers'])
 				->register();
 
 			add_action('admin_menu_editor-load_tab-' . $this->tabSlug, [$this, 'addContextualHelp']);
+
+			$this->localTabStyles['ame-redirector-ui-css'] = 'redirector.css';
 		}
 	}
 
@@ -111,7 +118,7 @@ class Module extends amePersistentModule {
 	 * @return array<string,bool>
 	 */
 	protected function getUserActors(WP_User $user) {
-		$actorIds = ['special:default' => true]; //The "default" setting applies to every user.
+		$actorIds = [self::DEFAULT_SETTING_ACTOR_ID => true]; //The "default" setting applies to every user.
 
 		if ( !isset($user) ) {
 			return $actorIds;
@@ -308,22 +315,21 @@ class Module extends amePersistentModule {
 		return $user;
 	}
 
+	/** @noinspection PhpVariableIsUsedOnlyInClosureInspection */
 	public function enqueueTabScripts() {
 		parent::enqueueTabScripts();
 
-		wp_enqueue_auto_versioned_script(
+		$baseDeps = $this->menuEditor->get_base_dependencies();
+
+		$script = $this->registerLocalScript(
 			self::UI_SCRIPT_HANDLE,
-			plugins_url('redirector-ui.js', __FILE__),
+			'redirector-ui.js',
 			[
 				'jquery',
 				'jquery-ui-position',
 				'jquery-ui-autocomplete',
-				'ame-knockout',
-				'ame-actor-selector',
-				'ame-actor-manager',
-				'ame-knockout-sortable',
-				'ame-lodash',
-				$this->searchUsersAction->getScriptHandle(),
+				$baseDeps()->koPackage()->koSortable(),
+				$this->searchUsersAction->getRegisteredScriptHandle(),
 			]
 		);
 
@@ -351,6 +357,10 @@ class Module extends amePersistentModule {
 		if ( $this->menuEditor->get_plugin_option('delete_orphan_actor_settings') ) {
 			$cleaner = new \ameActorAccessCleaner();
 			$flattenedRedirects = array_filter($flattenedRedirects, function ($details) use ($cleaner) {
+				//Special case: the "actor" that holds the default setting is always valid.
+				if ( $details['actorId'] === self::DEFAULT_SETTING_ACTOR_ID ) {
+					return true;
+				}
 				return $cleaner->tryActorExists($details['actorId'], true);
 			});
 
@@ -365,6 +375,7 @@ class Module extends amePersistentModule {
 			'roles'           => $roles,
 			'users'           => $loadedUsers,
 			'hasMoreUsers'    => $hasMoreUsers,
+			'saveFormConfig'  => $this->getSaveSettingsForm()->getJsSaveFormConfig(),
 		];
 
 		//phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -374,38 +385,20 @@ class Module extends amePersistentModule {
 		}
 		//phpcs:enable
 
-		wp_add_inline_script(
-			self::UI_SCRIPT_HANDLE,
-			sprintf('wsAmeRedirectorSettings = (%s);', wp_json_encode($scriptData)),
-			'before'
-		);
-	}
-
-	public function enqueueTabStyles() {
-		parent::enqueueTabStyles();
-
-		wp_enqueue_auto_versioned_style(
-			'ame-redirector-ui-css',
-			plugins_url('redirector.css', __FILE__)
-		);
+		$script->addJsVariable('wsAmeRedirectorSettings', $scriptData);
+		$script->enqueue();
 	}
 
 	public function handleSettingsForm($post = []) {
 		parent::handleSettingsForm($post);
 
-		$submittedSettings = json_decode($post['settings'], true);
-		$validationResult = $this->validateSubmittedSettings($submittedSettings);
+		$submission = $this->getSaveSettingsForm()->processKnockoutSubmission($post);
+		$submittedSettings = $submission->getSettings();
 
-		if ( is_wp_error($validationResult) ) {
-			//It seems that wp_die() doesn't automatically escape special characters, so let's do that.
-			wp_die(esc_html($validationResult->get_error_message()));
-		}
-
-		$newRedirects = new RedirectCollection();
-		foreach ($submittedSettings['redirects'] as $redirect) {
-			$newRedirects->add($redirect);
-		}
-		$this->redirects = $newRedirects;
+		$this->redirects = w($submittedSettings['redirects'])->foldLeft(
+			new RedirectCollection(),
+			fn($collection, $redirectData) => $collection->add($redirectData)
+		);
 		$this->saveSettings();
 
 		//Remember the first time the admin changes settings. This can then be used to avoid applying
@@ -415,130 +408,46 @@ class Module extends amePersistentModule {
 			add_site_option(self::SETTINGS_INIT_TIME_KEY, time());
 		}
 
-		$params = ['updated' => 1];
-		if ( !empty($post['selectedTrigger']) ) {
-			$params['selectedTrigger'] = strval($post['selectedTrigger']);
-		}
-
-		wp_redirect($this->getTabUrl($params));
-		exit;
+		$submission->performSuccessRedirect();
 	}
 
 	/**
-	 * @param $settings
-	 * @return bool|WP_Error
+	 * @var KnockoutSaveForm|null
 	 */
-	protected function validateSubmittedSettings($settings) {
-		if ( !is_array($settings) ) {
-			return new WP_Error(
-				'ame_invalid_json',
-				sprintf('Invalid JSON data. Expected an associative array, got %s.', gettype($settings))
-			);
+	private ?KnockoutSaveForm $saveForm = null;
+
+	private function getSaveSettingsForm(): KnockoutSaveForm {
+		if ( $this->saveForm === null ) {
+			$s = new SchemaFactory();
+			$submittedSettingsSchema = $s->struct([
+				'redirects' => $s->arr(
+					$s->struct([
+						//Actor IDs always follow the "prefix:value" format.
+						'actorId'           => $s->actorId(),
+						//The URL can be basically anything, so we don't try to validate it.
+						'urlTemplate'       => $s->string()->max(2000),
+						//Menu template IDs are based on menu URLs, so they're pretty unpredictable.
+						//If one is given, it must be non-empty.
+						'menuTemplateId'    => $s->string()->min(1),
+						//A trigger is always a lowercase string.
+						'trigger'           => $s->string()->min(2)->max(20)->regex('@^[a-z\-]{2,20}+$@i'),
+						'shortcodesEnabled' => $s->boolean(),
+					])->required([
+						'actorId',
+						'urlTemplate',
+						'trigger',
+						'shortcodesEnabled',
+					])
+				),
+			])->required();
+
+			$this->saveForm = KnockoutSaveForm::builderFor($this)
+				->settingsFieldSchema($submittedSettingsSchema)
+				->passThroughParams(['selectedTrigger'])
+				->build();
 		}
+		return $this->saveForm;
 
-		if ( !array_key_exists('redirects', $settings) ) {
-			return new WP_Error('rui_missing_redirects_key', 'The required "redirects" field is missing.');
-		}
-
-		$allowedProperties = [
-			//Actor IDs always follow the "prefix:value" format.
-			'actorId'           => /** @lang RegExp */
-				'@^[a-z]{1,15}+:[^\s].{0,300}+$@i',
-			//The URL can be basically anything, so we don't try to validate it.
-			'urlTemplate'       => null,
-			//Menu template IDs are based on menu URLs, so they're pretty unpredictable. If one is given, it must be non-empty.
-			'menuTemplateId'    => /** @lang RegExp */
-				'@^.@',
-			//A trigger is always a lowercase string. We could just list the supported values once dev. is done.
-			'trigger'           => /** @lang RegExp */
-				'@^[a-z\-]{2,20}+$@i',
-			//The shortcode flag is a boolean value. No regex for that.
-			'shortcodesEnabled' => null,
-		];
-		$requiredProperties = [
-			'actorId'           => true,
-			'urlTemplate'       => true,
-			'shortcodesEnabled' => true,
-			'trigger'           => true,
-		];
-
-		foreach ($settings['redirects'] as $key => $redirect) {
-			if ( !is_array($redirect) ) {
-				return new WP_Error(
-					'rui_bad_redirect_data_type',
-					sprintf('Redirect %s should be an array but it is actually %s', $key, gettype($redirect))
-				);
-			}
-
-			//Verify that it has all the required properties.
-			$missingProperties = array_diff_key($requiredProperties, $redirect);
-			if ( !empty($missingProperties) ) {
-				$firstMissingProp = reset($missingProperties);
-				return new WP_Error(
-					'rui_missing_key',
-					sprintf('Redirect %s is missing the required property "%s"', $key, $firstMissingProp)
-				);
-			}
-
-			//Verify that the redirect has only allowed properties.
-			$badProperties = array_diff_key($redirect, $allowedProperties);
-			if ( !empty($badProperties) ) {
-				$firstBadProp = reset($badProperties);
-				return new WP_Error(
-					'rui_bad_key',
-					sprintf('Redirect %s has an unsupported property "%s"', $key, $firstBadProp)
-				);
-			}
-
-			//String properties must match their validation regex (if any).
-			foreach ($allowedProperties as $property => $regex) {
-				if (
-					is_string($regex) && isset($redirect[$property])
-					&& (!is_string($redirect[$property]) || !preg_match($regex, $redirect[$property]))
-				) {
-					return new WP_Error(
-						'rui_invalid_property_value',
-						sprintf('Redirect %s: Property "%s" has an invalid value.', $key, $property)
-					);
-				}
-			}
-
-			//shortcodesEnabled must be a boolean.
-			if ( array_key_exists('shortcodesEnabled', $redirect) && !is_bool($redirect['shortcodesEnabled']) ) {
-				return new WP_Error(
-					'rui_invalid_property_value',
-					sprintf(
-						'Redirect %s: The "shortcodesEnabled" property is invalid.'
-						. ' Expected a boolean, but actual type is "%s".',
-						$key,
-						gettype($redirect['shortcodesEnabled'])
-					)
-				);
-			}
-
-			//URL template must be a string.
-			if ( !is_string($redirect['urlTemplate']) ) {
-				return new WP_Error(
-					'rui_invalid_property_value',
-					sprintf(
-						'Redirect %s: The "urlTemplate" property is invalid.'
-						. ' Expected a string, but actual type is "%s".',
-						$key,
-						gettype($redirect['urlTemplate'])
-					)
-				);
-			}
-
-			//URL template must be non-empty.
-			if ( trim($redirect['urlTemplate']) === '' ) {
-				return new WP_Error(
-					'rui_empty_url',
-					sprintf('Redirect %s: The "urlTemplate" property is empty.', $key)
-				);
-			}
-		}
-
-		return true;
 	}
 
 	/**
@@ -589,7 +498,7 @@ class Module extends amePersistentModule {
 				'blog_id'     => 0,
 				'count_total' => false,
 				'fields'      => self::$desiredUserFields,
-				'login__in'   => array_values($usersToLoad),
+				'login__in'   => array_keys($usersToLoad),
 			]);
 			$loadedUsers = array_merge($loadedUsers, $additionalUsers);
 		}
@@ -854,13 +763,15 @@ class RedirectCollection {
 	 * Add a redirect to the collection.
 	 *
 	 * @param array $redirectProperties
+	 * @return $this
 	 */
-	public function add($redirectProperties) {
+	public function add(array $redirectProperties): self {
 		$trigger = $redirectProperties['trigger'];
 		if ( !isset($this->rawItems[$trigger]) ) {
 			$this->rawItems[$trigger] = [];
 		}
 		$this->rawItems[$trigger][] = $redirectProperties;
+		return $this;
 	}
 }
 

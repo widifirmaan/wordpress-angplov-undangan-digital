@@ -1,4 +1,3 @@
-/*! elementor - v3.23.0 - 25-07-2024 */
 #e-dashboard-widget-admin-top-bar {
   position: absolute;
   opacity: 0;
@@ -6,13 +5,13 @@
 }
 
 #e-admin-top-bar-root {
-  right: 0;
   font-family: var(--e-a-font-family);
   background: var(--e-a-bg-default);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
   display: none;
   position: absolute;
-  top: 0;
+  inset-block-start: 0;
+  inset-inline-end: 0;
   width: calc(100% - 160px);
   z-index: 1;
 }
@@ -76,14 +75,14 @@ body.folded #e-admin-top-bar-root {
 #e-admin-top-bar-root.e-admin-top-bar--active {
   display: block;
 }
-#e-admin-top-bar-root.e-admin-top-bar--active ~ #wpbody #wpbody-content {
+#e-admin-top-bar-root.e-admin-top-bar--active:not(.e-admin-top-bar--editor-one) ~ #wpbody #wpbody-content {
   margin-block-start: 50px;
 }
-#e-admin-top-bar-root.e-admin-top-bar--active ~ #wpbody .wrap {
+#e-admin-top-bar-root.e-admin-top-bar--active:not(.e-admin-top-bar--editor-one) ~ #wpbody .wrap {
   clear: both;
   padding-block-start: 10px;
 }
-#e-admin-top-bar-root.e-admin-top-bar--active ~ #wpbody .wrap h1 {
+#e-admin-top-bar-root.e-admin-top-bar--active:not(.e-admin-top-bar--editor-one) ~ #wpbody .wrap h1 {
   display: none;
 }
 #e-admin-top-bar-root:not(.e-admin-top-bar--active) ~ #wpbody .wrap h1, #e-admin-top-bar-root:not(.e-admin-top-bar--active) ~ #wpbody .wrap .page-title-action {
@@ -121,7 +120,7 @@ body.folded #e-admin-top-bar-root {
   margin: 0 4px;
   line-height: normal;
 }
-#e-admin-top-bar-root ~ #wpbody .wrap h1, #e-admin-top-bar-root ~ #wpbody .wrap .page-title-action {
+#e-admin-top-bar-root:not(.e-admin-top-bar--editor-one) ~ #wpbody .wrap h1, #e-admin-top-bar-root:not(.e-admin-top-bar--editor-one) ~ #wpbody .wrap .page-title-action {
   display: none;
 }
 
@@ -141,14 +140,14 @@ body.folded #e-admin-top-bar-root {
   }
 }
 @media (max-width: 768px) {
+  #e-admin-top-bar-root .e-admin-top-bar__main-area-buttons {
+    position: absolute;
+    top: calc(100% + 10px);
+  }
   #e-admin-top-bar-root {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-  #e-admin-top-bar-root .e-admin-top-bar__main-area-buttons {
-    position: absolute;
-    top: calc(100% + 10px);
   }
   #e-admin-top-bar-root .e-admin-top-bar__secondary-area .e-admin-top-bar__secondary-area-buttons {
     display: none;

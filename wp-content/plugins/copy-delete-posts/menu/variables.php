@@ -17,6 +17,8 @@ if (!defined('ABSPATH')) exit;
  */
   add_action('cdp_notices_special', function() {
 
+    return; // Temporary disabled.
+
     if (cdp_check_permissions(wp_get_current_user()) == false) return;
     if (!get_option('cdp_dismiss_perf_notice', false) && get_option('cdp_latest_slow_performance', false)) {
 

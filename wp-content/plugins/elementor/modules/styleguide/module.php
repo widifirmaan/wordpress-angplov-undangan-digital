@@ -6,7 +6,7 @@ use Elementor\Plugin;
 use Elementor\Modules\Styleguide\Controls\Switcher;
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit; // Exit if accessed directly.
 }
 
 class Module extends Base_Module {
@@ -66,6 +66,8 @@ class Module extends Base_Module {
 		wp_localize_script( static::ASSETS_HANDLE, 'elementorStyleguideConfig', [
 			'activeKitId' => $kit_id,
 		] );
+
+		wp_set_script_translations( static::ASSETS_HANDLE, 'elementor' );
 	}
 
 	public function enqueue_app_initiator( $is_preview = false ) {
@@ -86,12 +88,14 @@ class Module extends Base_Module {
 			ELEMENTOR_VERSION,
 			true
 		);
+
+		wp_set_script_translations( static::ASSETS_HANDLE . '-app-initiator', 'elementor' );
 	}
 
 	public function enqueue_styles() {
 		wp_enqueue_style(
 			static::ASSETS_HANDLE,
-			$this->get_css_assets_url( 'modules/' . static::ASSETS_SRC . '/' . static::ASSETS_SRC ),
+			$this->get_css_assets_url( 'modules/styleguide/editor' ),
 			[],
 			ELEMENTOR_VERSION
 		);
@@ -108,7 +112,7 @@ class Module extends Base_Module {
 	 *
 	 * @param $element
 	 * @param string $section_id
-	 * @param array $args
+	 * @param array  $args
 	 */
 	public function add_styleguide_enable_controls( $element, $section_id, $args ) {
 		if ( 'kit' !== $element->get_name() || ! in_array( $section_id, [ 'section_global_colors', 'section_text_style' ] ) ) {

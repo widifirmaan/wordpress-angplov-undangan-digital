@@ -2,26 +2,35 @@
 /**
  * The Third Party integration with WooCommerce PDF Product Vouchers.
  *
- * @since		5.1.0
+ * @since 5.1.0
+ * @package LiteSpeed
+ * @subpackage LiteSpeed_Cache\Thirdparty
  */
+
 namespace LiteSpeed\Thirdparty;
 
 defined('WPINC') || exit();
 
-class WC_PDF_Product_Vouchers
-{
+/**
+ * Provides compatibility for WooCommerce PDF Product Vouchers.
+ */
+class WC_PDF_Product_Vouchers {
+
 	/**
-	 * Do not cache generated vouchers
+	 * Disable caching for generated vouchers.
 	 *
 	 * @since 5.1.0
+	 * @access public
+	 * @return void
 	 */
-	public static function detect()
-	{
+	public static function detect() {
 		if (!class_exists('\WC_PDF_Product_Vouchers_Loader')) {
 			return;
 		}
 
-		$is_voucher = !empty($_GET['post_type']) && 'wc_voucher' === $_GET['post_type'];
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$is_voucher = !empty($_GET['post_type']) && 'wc_voucher' === sanitize_text_field(wp_unslash($_GET['post_type']));
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$has_key = !empty($_GET['voucher_key']) || !empty($_GET['key']);
 
 		if ($is_voucher && $has_key) {

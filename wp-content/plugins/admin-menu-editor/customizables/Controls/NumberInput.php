@@ -2,11 +2,13 @@
 
 namespace YahnisElsts\AdminMenuEditor\Customizable\Controls;
 
+use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Context;
+use YahnisElsts\AdminMenuEditor\Customizable\Schemas\Enum;
 use YahnisElsts\AdminMenuEditor\ProCustomizable\Settings\CssLengthSetting;
+use YahnisElsts\AdminMenuEditor\ProCustomizable\Settings\WithSchema\CssLengthSetting as CssLengthSettingWithSchema;
 use YahnisElsts\AdminMenuEditor\Customizable\HtmlHelper;
 use YahnisElsts\AdminMenuEditor\Customizable\Rendering\Renderer;
 use YahnisElsts\AdminMenuEditor\Customizable\Settings;
-use YahnisElsts\AdminMenuEditor\Customizable\Settings\Setting;
 
 class NumberInput extends AbstractNumericControl {
 	protected $type = 'fancyNumber';
@@ -17,13 +19,13 @@ class NumberInput extends AbstractNumericControl {
 	 */
 	protected $fixedUnit = null;
 	/**
-	 * @var Setting|null
+	 * @var Settings\AbstractSetting|null
 	 */
 	protected $unitSetting = null;
 
-	public function __construct($settings = [], $params = []) {
+	public function __construct($settings = [], $params = [], $children = []) {
 		$this->hasPrimaryInput = true;
-		parent::__construct($settings, $params);
+		parent::__construct($settings, $params, $children);
 
 		//Units can be specified in a number of ways.
 		if ( isset($settings['unit']) ) {
@@ -34,60 +36,43 @@ class NumberInput extends AbstractNumericControl {
 			if ( array_key_exists('unit', $params) ) {
 				if ( is_string($params['unit']) ) {
 					$this->fixedUnit = $params['unit'];
-				} else if ( $params['unit'] instanceof Setting ) {
+				} else if ( $params['unit'] instanceof Settings\AbstractSetting ) {
 					$this->unitSetting = $params['unit'];
 				}
-			} else if ( $this->mainSetting instanceof CssLengthSetting ) {
-				$unitSetting = $this->mainSetting->getUnitSetting();
-				if ( $unitSetting instanceof Setting ) {
+			} else if (
+				($this->mainBinding instanceof CssLengthSetting)
+				|| ($this->mainBinding instanceof CssLengthSettingWithSchema)
+			) {
+				$unitSetting = $this->mainBinding->getUnitSetting();
+				if ( $unitSetting instanceof Settings\AbstractSetting ) {
 					$this->unitSetting = $unitSetting;
 				} else {
-					$this->fixedUnit = $this->mainSetting->getUnit();
+					$this->fixedUnit = $this->mainBinding->getUnit();
 				}
-			}
-		}
-
-		//Add the "ame-small-number-input" class to controls where the expected
-		//number of digits is 4 or less. This only applies if both the min and
-		//max values are known.
-		if ( is_numeric($this->min) && is_numeric($this->max) ) {
-			$digits = 1;
-			//Digits before the decimal point = greatest log10 of abs(min) and abs(max).
-			//Add 1 because log10 is one less than the number of digits (e.g. log10(1) = 0).
-			//Note the use of loose comparison to avoid "0 !== 0.0" issues.
-			if ( ($this->min != 0) ) {
-				$digits = max($digits, floor(log10(abs($this->min))) + 1);
-			}
-			if ( ($this->max != 0) ) {
-				$digits = max($digits, floor(log10(abs($this->max))) + 1);
-			}
-
-			//Add the digits after the decimal point if the step is a decimal number.
-			$defaultStep = $this->getDefaultStep();
-			$fraction = abs($defaultStep - floor($defaultStep));
-			if ( ($fraction != 0) ) {
-				$digits += floor(abs(log10(abs($fraction))));
-			}
-
-			if ( ($digits <= 4) && !in_array('ame-small-number-input', $this->inputClasses) ) {
-				$this->inputClasses[] = 'ame-small-number-input';
 			}
 		}
 	}
 
-	public function renderContent(Renderer $renderer) {
-		$hasUnitDropdown = $this->unitSetting instanceof Settings\EnumSetting;
+	public function renderContent(Renderer $renderer, Context $context) {
+		$hasUnitDropdown = (
+			($this->unitSetting instanceof Settings\EnumSetting)
+			|| (
+				($this->unitSetting instanceof Settings\WithSchema\SettingWithSchema)
+				&& ($this->unitSetting->getSchema() instanceof Enum)
+			)
+		);
 
 		$currentUnitValue = $this->getCurrentUnit();
 		if ( $hasUnitDropdown || !empty($currentUnitValue) ) {
-			$unitElementId = $this->getUnitElementId();
+			$unitElementId = $this->getUnitElementId($context);
 		} else {
 			$unitElementId = null;
 		}
 
-		$value = $this->getMainSettingValue();
+		$value = $this->getMainSettingValue(null, $context);
 
-		$sliderRanges = $this->getSliderRanges();
+		$numberConfig = $this->getNumberConfig($context);
+		$sliderRanges = $this->getSliderRanges($numberConfig);
 
 		$wrapperClasses = ['ame-number-input-control'];
 		if ( !empty($sliderRanges) ) {
@@ -106,7 +91,7 @@ class NumberInput extends AbstractNumericControl {
 			echo '<div class="ame-input-group">';
 		}
 
-		$attributes = $this->getBasicInputAttributes();
+		$attributes = $this->getBasicInputAttributes($numberConfig);
 		$attributes['value'] = $value;
 
 		$inputClasses = [];
@@ -130,11 +115,11 @@ class NumberInput extends AbstractNumericControl {
 		], $this->getKoEnableBinding()));
 
 		//phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buildInputElement() is safe
-		echo $this->buildInputElement($attributes);
+		echo $this->buildInputElement($context, $attributes);
 
-		if ( $hasUnitDropdown && ($this->unitSetting instanceof Settings\EnumSetting) ) {
+		if ( $hasUnitDropdown ) {
 			$this->renderUnitDropdown($this->unitSetting, [
-				'name'               => $this->getFieldName(null, $this->unitSetting),
+				'name'               => $this->getFieldName($context, null, $this->unitSetting),
 				'id'                 => $unitElementId,
 				'class'              => 'ame-input-group-secondary ame-number-input-unit',
 				'data-ac-setting-id' => $this->unitSetting->getId(),
@@ -169,28 +154,46 @@ class NumberInput extends AbstractNumericControl {
 	}
 
 	protected function getCurrentUnit() {
-		if ( $this->unitSetting instanceof Setting ) {
+		if ( $this->unitSetting instanceof Settings\AbstractSetting ) {
 			return $this->unitSetting->getValue();
 		}
 		return $this->fixedUnit;
 	}
 
-	protected function getUnitElementId() {
-		return $this->getPrimaryInputId() . '__unit';
+	protected function getUnitElementId(?Context $context = null) {
+		return $this->getPrimaryInputId($context) . '__unit';
 	}
 
-	protected function getKoComponentParams() {
+	public function getInputClasses(?Context $context = null): array {
+		$classes = parent::getInputClasses($context);
+
+		//Add the "ame-small-number-input" class to controls where the expected
+		//number of digits is 4 or less. This only applies if both the min and
+		//max values are known.
+		$maxDigits = $this->getNumberConfig($context)->getEstimatedMaxDigits();
+		if (
+			is_numeric($maxDigits)
+			&& ($maxDigits <= 4)
+			&& !in_array('ame-small-number-input', $classes)
+		) {
+			$classes[] = 'ame-small-number-input';
+		}
+
+		return $classes;
+	}
+
+
+	protected function getKoComponentParams(): array {
 		$params = parent::getKoComponentParams();
 
 		$unitText = $this->getCurrentUnit();
 		$hasUnitDropdown = false;
 
-		if ( $this->unitSetting instanceof Settings\EnumSetting ) {
+		$units = ChoiceControlOption::tryGenerateFromSetting($this->unitSetting);
+		if ( !empty($units) ) {
 			$hasUnitDropdown = true;
 			$params['hasUnitDropdown'] = true;
-			$params['unitDropdownOptions'] = ChoiceControlOption::generateKoOptions(
-				$this->unitSetting->generateChoiceOptions()
-			);
+			$params['unitDropdownOptions'] = ChoiceControlOption::generateKoOptions($units);
 		} else if ( !empty($unitText) ) {
 			$params['unitText'] = $unitText;
 		}
@@ -202,10 +205,10 @@ class NumberInput extends AbstractNumericControl {
 		return $params;
 	}
 
-	public function serializeForJs() {
-		$result = parent::serializeForJs();
+	public function serializeForJs(Context $context): array {
+		$result = parent::serializeForJs($context);
 
-		if ( $this->unitSetting instanceof Settings\EnumSetting ) {
+		if ( $this->unitSetting instanceof Settings\AbstractSetting ) {
 			if ( empty($result['settings']) ) {
 				$result['settings'] = [];
 			}
@@ -223,5 +226,18 @@ class NumberInput extends AbstractNumericControl {
 		//We need to enqueue the dependencies explicitly.
 		PopupSlider::enqueueDependencies();
 	}
+
+	public function getSettings() {
+		$settings = parent::getSettings();
+
+		//The unit setting might not be in the "settings" array if it was passed via params only.
+		//But we need it to correctly serialize the control's settings for JS.
+		if ( $this->unitSetting && !isset($settings['unit']) ) {
+			$settings['unit'] = $this->unitSetting;
+		}
+
+		return $settings;
+	}
+
 
 }
